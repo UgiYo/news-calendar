@@ -56,32 +56,44 @@ def collection_start(c,now):
   last=datetime.datetime.fromisoformat(c.get('last_collected_at') or '').astimezone(UTC)
   return max(earliest,min(now,last)-datetime.timedelta(days=2))
  except (ValueError,TypeError):return earliest
-def collect(c):
+def collect(c,diagnostics=None):
+ diagnostics=diagnostics if diagnostics is not None else {}
+ diagnostics.update(requests=0,feed_items=0,matched_items=0,accepted_items=0,collected=0,rejected_source=0,rejected_company=0,rejected_date=0,rejected_url=0)
  conflicts=api('/admin/company-aliases?code='+c['code'])['names']
  now=datetime.datetime.now(UTC);start=collection_start(c,now);rows={};cursor=start
+ diagnostics.update(from_=start.isoformat(),to=now.isoformat());diagnostics['from']=diagnostics.pop('from_')
  while cursor<now:
   end=min(cursor+datetime.timedelta(days=1),now)
   q=f'("{c["name"]}" OR "{c["full_name"]}" OR "{c["code"]}") (site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) after:{(cursor-datetime.timedelta(days=1)).date()} before:{(end+datetime.timedelta(days=1)).date()}'
   # Separate broker query improves coverage when broad stock news fills RSS results.
   broker_q=f'("{c["name"]}" OR "{c["full_name"]}" OR "{c["code"]}") (券商 OR 投顧 OR 外資 OR 目標價 OR 評等) (site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) after:{(cursor-datetime.timedelta(days=1)).date()} before:{(end+datetime.timedelta(days=1)).date()}'
   for query in (q,broker_q):
-   r=requests.get('https://news.google.com/rss/search',params={'q':query,'hl':'zh-TW','gl':'TW','ceid':'TW:zh-Hant'},timeout=30);r.raise_for_status()
+   diagnostics['requests']+=1
+   r=requests.get('https://news.google.com/rss/search',params={'q':query,'hl':'zh-TW','gl':'TW','ceid':'TW:zh-Hant'},timeout=30);diagnostics['http_status']=r.status_code
+   if not r.ok:raise ValueError('Google News RSS HTTP '+str(r.status_code))
    root=ET.fromstring(r.content)
-   if root.find('channel') is None:raise ValueError('Invalid RSS')
+   if root.find('channel') is None:raise ValueError('Google News RSS 格式異常')
    for item in root.findall('./channel/item'):
+    diagnostics['feed_items']+=1
     title=item.findtext('title') or '';url=item.findtext('link') or ''
     source_element=item.find('source');source=trusted_domain(source_element.get('url','') if source_element is not None else '')
-    if not source:continue
-    if not company_mention(title,c,conflicts):continue
+    if not source:diagnostics['rejected_source']+=1;continue
+    if not company_mention(title,c,conflicts):diagnostics['rejected_company']+=1;continue
+    diagnostics['matched_items']+=1
     try:published=email.utils.parsedate_to_datetime(item.findtext('pubDate')).astimezone(UTC)
-    except (ValueError,TypeError,AttributeError):continue
+    except (ValueError,TypeError,AttributeError):diagnostics['rejected_date']+=1;continue
+    if not start<=published<=now:diagnostics['rejected_date']+=1;continue
+    if not url.startswith('https://'):diagnostics['rejected_url']+=1;continue
+    diagnostics['accepted_items']+=1
     if start<=published<=now and url.startswith('https://'):
      rows[url]={'company_code':c['code'],'title':title,'url':url,'source':source,'published_at':published.isoformat(),'news_date':published.astimezone(TW).date().isoformat()}
   cursor=end;time.sleep(.2)
  values=curate_news(list(rows.values()))
  for i in range(0,len(values),20):api('/admin/news',{'news':values[i:i+20]})
  api('/admin/company',{'code':c['code'],'updated_at':now.isoformat()})
- print('Collected',c['code'],len(values))
+ diagnostics['collected']=len(values)
+ print('Collected',c['code'],json.dumps(diagnostics,ensure_ascii=False),flush=True)
+ return diagnostics
 def safe_url(url):
  u=urlparse(url)
  if u.scheme!='https' or not u.hostname or u.username or u.password or (u.port and u.port!=443):raise ValueError('來源網址不允許讀取')
@@ -138,31 +150,51 @@ def summarize(news):
   if ai_error:print('AI fallback',news['id'],ai_error,flush=True)
  if not summary:raise ValueError('無法產生摘要')
  api('/admin/summary',{'id':news['id'],'article_summary':summary,'summary_method':method,'article_url':url,'summary_error':ai_error})
+def collection_error(error):
+ if isinstance(error,ValueError):return str(error)[:600]
+ if isinstance(error,ET.ParseError):return 'Google News RSS XML 格式異常'
+ if isinstance(error,requests.Timeout):return '新聞來源讀取逾時'
+ if isinstance(error,requests.ConnectionError):return '新聞來源連線失敗'
+ if isinstance(error,requests.HTTPError):return '收集服務 HTTP '+str(error.response.status_code)
+ return '新聞收集失敗：'+type(error).__name__
+def save_attempt(code,details,job_id=None,failed=False):
+ run_id=os.environ.get('GITHUB_RUN_ID');repo=os.environ.get('GITHUB_REPOSITORY')
+ if run_id and repo:details['run_url']='https://github.com/'+repo+'/actions/runs/'+run_id
+ status='failed' if failed else 'success' if details.get('collected',0)>0 else 'empty'
+ print('News attempt',code,status,json.dumps(details,ensure_ascii=False),flush=True)
+ api('/admin/news-attempts',{'code':code,'job_id':job_id,'status':status,'details':details})
 def main():
  companies=api('/admin/tracked')['companies'];lookup={c['code']:c for c in companies};failed=[]
  if os.environ.get('RUN_MODE','daily')=='daily':
   for c in companies:
-   try:collect(c)
+   details={}
+   try:
+    collect(c,details);save_attempt(c['code'],details)
    except CollectorQuotaError:raise
    except Exception as e:
-    failed.append(c['code']);api('/admin/company',{'code':c['code'],'error':'新聞更新失敗，請重試'});print('Collection failed',c['code'],type(e).__name__)
+    failed.append(c['code']);error=collection_error(e);details['error']=error;save_attempt(c['code'],details,failed=True);api('/admin/company',{'code':c['code'],'error':error});print('Collection failed',c['code'],error,flush=True)
  processed=0
  while processed<500:
   jobs=api('/admin/claim',{})['jobs']
   if not jobs:break
   for job in jobs:
-   processed+=1;error=None;print('Processing',job['type'],job.get('company_code'),job.get('news_id'),flush=True)
+   processed+=1;error=None;details={};print('Processing',job['type'],job.get('company_code'),job.get('news_id'),flush=True)
    try:
     if job['type']=='collect':
-     if job['company_code'] in lookup:collect(lookup[job['company_code']])
+     company=lookup.get(job['company_code']) or api('/admin/collection-company?code='+job['company_code'])['company']
+     if not company:raise ValueError('公司名錄缺少任務股號 '+job['company_code'])
+     collect(company,details)
+     save_attempt(job['company_code'],details,job['id'])
     else:
      news=api('/admin/article?id='+str(job['news_id']))['news']
      if news and (not news['article_summary'] or news.get('summary_method')!='ai'):summarize(news)
    except CollectorQuotaError:raise
    except Exception as e:
-    error=str(e) if isinstance(e,ValueError) else '新聞來源或摘要服務暫時無法讀取'
+    error=collection_error(e) if job['type']=='collect' else str(e) if isinstance(e,ValueError) else '新聞來源或摘要服務暫時無法讀取'
     if job['type']=='summarize':api('/admin/summary',{'id':job['news_id'],'summary_error':error})
-    else:api('/admin/company',{'code':job['company_code'],'error':error})
+    else:
+     details['error']=error;save_attempt(job['company_code'],details,job['id'],failed=True)
+     api('/admin/company',{'code':job['company_code'],'error':error})
    api('/admin/job',{'id':job['id'],'error':error})
  if failed:raise SystemExit('Failed companies: '+','.join(failed))
 if __name__=='__main__':

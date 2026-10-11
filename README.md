@@ -346,3 +346,11 @@ AI 按使用者操作才執行，沿用現有 OpenAI／Azure／LiteLLM／Python 
 關閉追蹤與新聞同步時，更新先透過 `/preview` 讀取近一個月新聞；來源拒絕請求或連線失敗時，自動改走 `/device-collect`，由既有 GitHub Actions 蒐集公開新聞，完成後從 `/preview?stored=1` 取回並保存於當前帳號的裝置資料。此流程不新增雲端追蹤清單，也不呼叫 AI。登入失效與 D1 額度不足不會啟動備援。若等待超過兩分鐘，再按「立即更新新聞」即可取回已完成的任務；單一公司失敗會顯示股號並繼續其他公司。
 
 需一併部署更新的前端與 Cloudflare API（Pages Git 整合沿用 `npm ci && node scripts/build_cloudflare_pages.mjs`）；既有 DB、GITHUB_DISPATCH_TOKEN 和 GITHUB_REPO 設定即可，無需新增 Secret 或資料庫遷移。
+
+### 新聞更新紀錄與裝置追蹤股
+
+備援收集依任務股號讀取公司名錄，不以雲端追蹤清單限制裝置模式。找不到公司會明確失敗，不再跳過後回報完成。舊版沒有收集紀錄的完成任務不再阻擋重試。
+
+追蹤公司旁的「更新紀錄」可查最近 30 筆：來源直讀錯誤、Google News HTTP 狀態、收集期間、RSS 項目數、公司符合數、來源／公司／日期／網址排除數、收集結果與 Actions 連結。紀錄保存於 D1 的 `news_update_attempts` 表，首次使用自動建立；不保存 API Key、登入資訊、新聞回應全文。既有新聞與摘要不刪除。0 則會標示「查詢完成・0 則」，與來源失敗分開。
+
+需同時更新 Cloudflare API、前端與 GitHub Actions 收集程式，無需手動遷移或新增 Secret。詳細紀錄自本版部署後開始保留，舊任務無法補出當時未儲存的 HTTP 回應。

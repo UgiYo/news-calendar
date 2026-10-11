@@ -29,9 +29,9 @@ export async function deviceRequest(path,options,remote){
   catch(error){
    if(error.status===401||error.status===403||error.status===404||error.code?.startsWith('D1_'))throw error;
    const queued=await remote('/device-collect',{body:{code}});
-   return {...queued,deviceCollection:{code,owner:who}};
+   return {...queued,deviceCollection:{code,owner:who,sourceError:error.message}};
   }
-  saveCollectedNews(result.news,code,who);return {news:{device:true}};
+  saveCollectedNews(result.news,code,who);return {news:{device:true},collected:result.news.length};
  }
  const from=url.searchParams.get('from'),to=url.searchParams.get('to'),offset=Number(url.searchParams.get('offset')||0);
  return {news:data.news.filter(n=>data.companies.some(c=>c.code===n.company_code)&&n.news_date>=from&&n.news_date<=to).sort((a,b)=>String(b.published_at).localeCompare(String(a.published_at))).slice(offset,offset+500)};
@@ -53,5 +53,5 @@ function saveCollectedNews(news,code,who){
 export async function finishDeviceCollection(collection,remote){
  if(owner!==collection.owner)throw Error('登入帳號已變更，已停止新聞更新。');
  const result=await remote('/preview?stored=1&code='+encodeURIComponent(collection.code));
- saveCollectedNews(result.news,collection.code,collection.owner);
+ saveCollectedNews(result.news,collection.code,collection.owner);return result.news.length;
 }

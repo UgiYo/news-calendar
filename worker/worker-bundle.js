@@ -1,3 +1,24 @@
+// worker/news-diagnostics.js
+var fields = ["requests", "feed_items", "matched_items", "accepted_items", "collected", "http_status", "rejected_source", "rejected_company", "rejected_date", "rejected_url"];
+async function recordNewsAttempt(sql, { code, jobId = null, stage, status, details = {} }) {
+  details = details && typeof details === "object" ? details : {};
+  const safe = {};
+  for (const key of fields) if (Number.isSafeInteger(details[key]) && details[key] >= 0) safe[key] = details[key];
+  for (const key of ["error", "from", "to", "run_url"]) if (typeof details[key] === "string") safe[key] = details[key].slice(0, 600);
+  await sql("CREATE TABLE IF NOT EXISTS news_update_attempts(id INTEGER PRIMARY KEY AUTOINCREMENT,company_code TEXT NOT NULL,job_id TEXT,stage TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,details TEXT NOT NULL)").run();
+  await sql("CREATE INDEX IF NOT EXISTS news_attempts_company ON news_update_attempts(company_code,created_at)").run();
+  await sql("CREATE INDEX IF NOT EXISTS news_attempts_job ON news_update_attempts(job_id,created_at)").run();
+  await sql("INSERT INTO news_update_attempts(company_code,job_id,stage,status,created_at,details) VALUES(?,?,?,?,?,?)", code, jobId, stage, status, Date.now(), JSON.stringify(safe)).run();
+}
+async function newsAttempts(sql, { code, jobId } = {}) {
+  try {
+    return (await sql(jobId ? "SELECT * FROM news_update_attempts WHERE job_id=? ORDER BY id DESC LIMIT 1" : "SELECT * FROM news_update_attempts WHERE company_code=? ORDER BY id DESC LIMIT 30", jobId || code).all()).results.map((r) => ({ ...r, details: JSON.parse(r.details) }));
+  } catch (e) {
+    if (String(e.message).includes("no such table")) return [];
+    throw e;
+  }
+}
+
 // worker/d1-usage.js
 var initialized = /* @__PURE__ */ new WeakMap();
 async function ensureD1Index(db, name, statement) {
@@ -179,9 +200,9 @@ async function stockEventsRoute(req, { sql, reply, user, parsePreview: parsePrev
 }
 
 // worker/account-results.js
-var fields = ["id", "title", "kind", "date", "updated_at", "answer", "text", "partial", "failures", "transcription_model", "completed_at", "episode", "cloud_id"];
+var fields2 = ["id", "title", "kind", "date", "updated_at", "answer", "text", "partial", "failures", "transcription_model", "completed_at", "episode", "cloud_id"];
 function validAccountResult(row) {
-  return row && Object.keys(row).every((k) => fields.includes(k)) && (row.cloud_id === void 0 || typeof row.cloud_id === "string" && row.cloud_id.length <= 200) && (row.completed_at === void 0 || typeof row.completed_at === "string" && Number.isFinite(Date.parse(row.completed_at))) && (row.episode === void 0 || row.episode && typeof row.episode === "object" && !Array.isArray(row.episode) && Object.entries(row.episode).every(([k, v]) => ["id", "title", "date", "url", "audio_url", "channel_id", "channel_name"].includes(k) && typeof v === "string" && v.length <= 3e3)) && typeof row.id === "string" && row.id.length > 0 && row.id.length <= 500 && (row.transcription_model === void 0 || typeof row.transcription_model === "string" && row.transcription_model.length <= 200) && typeof row.title === "string" && row.title.length <= 1e3 && ["news", "text", "podcast"].includes(row.kind) && typeof row.updated_at === "string" && /^\d{4}-\d\d-\d\dT/.test(row.updated_at) && Number.isFinite(Date.parse(row.updated_at)) && typeof row.answer === "string" && typeof row.text === "string" && typeof row.date === "string" && typeof row.partial === "boolean" && Array.isArray(row.failures) && row.failures.every((v) => typeof v === "string");
+  return row && Object.keys(row).every((k) => fields2.includes(k)) && (row.cloud_id === void 0 || typeof row.cloud_id === "string" && row.cloud_id.length <= 200) && (row.completed_at === void 0 || typeof row.completed_at === "string" && Number.isFinite(Date.parse(row.completed_at))) && (row.episode === void 0 || row.episode && typeof row.episode === "object" && !Array.isArray(row.episode) && Object.entries(row.episode).every(([k, v]) => ["id", "title", "date", "url", "audio_url", "channel_id", "channel_name"].includes(k) && typeof v === "string" && v.length <= 3e3)) && typeof row.id === "string" && row.id.length > 0 && row.id.length <= 500 && (row.transcription_model === void 0 || typeof row.transcription_model === "string" && row.transcription_model.length <= 200) && typeof row.title === "string" && row.title.length <= 1e3 && ["news", "text", "podcast"].includes(row.kind) && typeof row.updated_at === "string" && /^\d{4}-\d\d-\d\dT/.test(row.updated_at) && Number.isFinite(Date.parse(row.updated_at)) && typeof row.answer === "string" && typeof row.text === "string" && typeof row.date === "string" && typeof row.partial === "boolean" && Array.isArray(row.failures) && row.failures.every((v) => typeof v === "string");
 }
 async function accountResultsRoute(req, { sql, reply, user, db }) {
   const url = new URL(req.url);
@@ -238,7 +259,7 @@ async function accountResultsRoute(req, { sql, reply, user, db }) {
 }
 
 // worker/podcasts.js
-var fields2 = ["id", "title", "published_at", "date", "url", "audio_url", "description", "duration", "transcript_url"];
+var fields3 = ["id", "title", "published_at", "date", "url", "audio_url", "description", "duration", "transcript_url"];
 function podcastFeed(value) {
   const u = new URL(String(value || "").trim());
   const h = u.hostname.toLowerCase();
@@ -249,7 +270,7 @@ function payload(data, id, feed) {
   if (!data || typeof data.title !== "string" || !data.title.trim() || data.title.length > 500 || !Array.isArray(data.episodes) || !data.episodes.length || data.episodes.length > 150) throw Error("Podcast \u96C6\u6578\u8CC7\u6599\u683C\u5F0F\u932F\u8AA4");
   const episodes = data.episodes.map((e) => {
     if (!e.id || !e.title || !Number.isFinite(Date.parse(e.published_at))) throw Error("Podcast \u96C6\u6578\u8CC7\u6599\u683C\u5F0F\u932F\u8AA4");
-    const row = Object.fromEntries(fields2.map((k) => [k, String(e[k] || "").slice(0, k === "description" ? 1e4 : 2e3)]));
+    const row = Object.fromEntries(fields3.map((k) => [k, String(e[k] || "").slice(0, k === "description" ? 1e4 : 2e3)]));
     for (const k of ["url", "audio_url", "transcript_url"]) if (row[k]) {
       const u = new URL(row[k]);
       if (u.protocol !== "https:" || u.username || u.password) throw Error("Podcast \u9023\u7D50\u5FC5\u9808\u662F HTTPS");
@@ -1213,6 +1234,16 @@ var index_default = { async fetch(req, env) {
         if (!c) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
         return reply({ names: (await sql("SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0", c.code, c.name, c.name).all()).results.map((x) => x.name) });
       }
+      if (path === "/admin/collection-company") {
+        const company = await sql("SELECT * FROM companies WHERE code=?", url.searchParams.get("code")).first();
+        return company ? reply({ company }) : reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
+      }
+      if (path === "/admin/news-attempts" && req.method === "POST") {
+        const b = await req.json();
+        if (!/^\d{4,6}$/.test(b.code || "") || !["success", "empty", "failed"].includes(b.status) || !await sql("SELECT code FROM companies WHERE code=?", b.code).first()) return reply({ error: "Invalid attempt" }, 400);
+        await recordNewsAttempt(sql, { code: b.code, jobId: b.job_id || null, stage: "collector", status: b.status, details: b.details });
+        return reply({ ok: true });
+      }
       if (path === "/admin/tracked") return reply({ companies: (await sql("SELECT DISTINCT c.* FROM companies c JOIN watchlists w ON c.code=w.company_code").all()).results });
       if (path === "/admin/claim" && req.method === "POST") {
         await sql("UPDATE jobs SET status='pending' WHERE status='running' AND claimed_at<?", Date.now() - 20 * 6e4).run();
@@ -1519,10 +1550,25 @@ var index_default = { async fetch(req, env) {
       }
       const feed = new URL("https://news.google.com/rss/search");
       feed.search = new URLSearchParams({ q: `("${company.name}" OR "${company.full_name}" OR "${code}") (site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) when:1m`, hl: "zh-TW", gl: "TW", ceid: "TW:zh-Hant" }).toString();
-      const response = await fetch(feed, { headers: { "User-Agent": "StockNewsCalendar/2.0" }, signal: AbortSignal.timeout(2e4) });
-      if (!response.ok) return reply({ error: "\u65B0\u805E\u4F86\u6E90\u66AB\u6642\u7121\u6CD5\u8B80\u53D6\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66" }, 502);
-      const conflicts = (await sql("SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0", company.code, company.name, company.name).all()).results.map((x) => x.name);
-      return reply({ company, news: parsePreview(await response.text(), company, /* @__PURE__ */ new Date(), conflicts) });
+      let httpStatus = 0;
+      try {
+        const response = await fetch(feed, { headers: { "User-Agent": "StockNewsCalendar/2.0" }, signal: AbortSignal.timeout(2e4) });
+        httpStatus = response.status;
+        if (!response.ok) throw Error("Google News RSS HTTP " + httpStatus);
+        const conflicts = (await sql("SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0", company.code, company.name, company.name).all()).results.map((x) => x.name);
+        return reply({ company, news: parsePreview(await response.text(), company, /* @__PURE__ */ new Date(), conflicts) });
+      } catch (e) {
+        const quota = d1QuotaError(e);
+        if (quota) throw e;
+        const error = httpStatus && httpStatus !== 200 ? "Google News RSS HTTP " + httpStatus : e.name === "TimeoutError" || e.name === "AbortError" ? "Google News RSS \u8B80\u53D6\u903E\u6642" : httpStatus === 200 ? "Google News RSS \u683C\u5F0F\u7570\u5E38" : "Google News RSS \u9023\u7DDA\u5931\u6557";
+        await recordNewsAttempt(sql, { code, stage: "preview", status: "failed", details: { http_status: httpStatus, error } });
+        return reply({ error, code: "NEWS_SOURCE_UNAVAILABLE" }, 502);
+      }
+    }
+    if (path === "/news-update-history") {
+      const code = url.searchParams.get("code");
+      if (!/^\d{4,6}$/.test(code || "")) return reply({ error: "Invalid code" }, 400);
+      return reply({ attempts: await newsAttempts(sql, { code }) });
     }
     if (path === "/watchlists" && req.method === "GET") {
       const companies = (await sql("SELECT c.*, (SELECT COUNT(*) FROM news n WHERE n.company_code=c.code) AS news_count FROM companies c JOIN watchlists w ON c.code=w.company_code WHERE w.user_id=? ORDER BY w.created_at,c.code", user.id).all()).results;
@@ -1546,7 +1592,7 @@ var index_default = { async fetch(req, env) {
     }
     if (path === "/device-collect" && req.method === "GET") {
       const job = await sql("SELECT id,status,error FROM jobs WHERE id=? AND type='collect'", url.searchParams.get("id")).first();
-      return job ? reply({ job }) : reply({ error: "Job not found" }, 404);
+      return job ? reply({ job, attempt: (await newsAttempts(sql, { jobId: job.id }))[0] || null }) : reply({ error: "Job not found" }, 404);
     }
     if ((path === "/collect" || path === "/device-collect" || path === "/summarize") && req.method === "POST") {
       const b = await req.json(), type = path === "/device-collect" ? "collect" : path.slice(1);
@@ -1572,10 +1618,11 @@ var index_default = { async fetch(req, env) {
             dispatchError2 = e.message || "GitHub \u9023\u7DDA\u5931\u6557";
           }
         }
+        if (type === "collect" && dispatched2 !== void 0) await recordNewsAttempt(sql, { code, jobId: existing.id, stage: "queue", status: dispatched2 ? "queued" : "failed", details: { error: dispatchError2 || (!dispatched2 ? "GitHub Actions \u672A\u555F\u52D5" : "") } });
         return reply({ job: existing, news, dispatched: dispatched2, dispatchError: dispatchError2 }, 202);
       }
       const recent = await sql("SELECT * FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND created_at>? ORDER BY created_at DESC LIMIT 1", type, code, news?.id || null, Date.now() - 15 * 6e4).first();
-      if (recent?.status === "done" && !retryAI) return reply({ job: recent, news }, 202);
+      if (recent?.status === "done" && !retryAI && (type !== "collect" || (await newsAttempts(sql, { jobId: recent.id })).length)) return reply({ job: recent, news }, 202);
       const id = randomToken();
       await sql("INSERT OR IGNORE INTO jobs(id,type,company_code,news_id,created_at) VALUES(?,?,?,?,?)", id, type, code, news?.id || null, Date.now()).run();
       const queued = await sql("SELECT id,status FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND status IN ('pending','running') LIMIT 1", type, code, news?.id || null).first();
@@ -1585,12 +1632,13 @@ var index_default = { async fetch(req, env) {
       } catch (e) {
         dispatchError = e.message || "GitHub \u9023\u7DDA\u5931\u6557";
       }
+      if (type === "collect") await recordNewsAttempt(sql, { code, jobId: queued.id, stage: "queue", status: dispatched ? "queued" : "failed", details: { error: dispatchError || (!dispatched ? "GitHub Actions \u672A\u555F\u52D5" : "") } });
       return reply({ job: queued, news, dispatched, dispatchError }, 202);
     }
     if (path === "/jobs") {
       const j = await sql("SELECT j.* FROM jobs j JOIN watchlists w ON w.company_code=j.company_code WHERE j.id=? AND w.user_id=?", url.searchParams.get("id"), user.id).first();
       if (!j) return reply({ error: "Job not found" }, 404);
-      return reply({ job: j, news: j.news_id ? await sql("SELECT * FROM news WHERE id=?", j.news_id).first() : void 0 });
+      return reply({ job: j, attempt: j.type === "collect" ? (await newsAttempts(sql, { jobId: j.id }))[0] || null : null, news: j.news_id ? await sql("SELECT * FROM news WHERE id=?", j.news_id).first() : void 0 });
     }
     return reply({ error: "Not found" }, 404);
   } catch (e) {
