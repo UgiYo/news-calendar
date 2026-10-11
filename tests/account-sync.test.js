@@ -13,7 +13,7 @@ test('completed results sync only for their logged-in owner and never include cr
 test('device news update falls back to collector and imports completed shared news without syncing watchlist',async()=>{
  storage();setSyncOwner('one');saveDeviceData({companies:[{code:'6515'}],news:[{company_code:'2330',url:'https://same',title:'other company'}]});const calls=[];
  const remote=async(path,options)=>{calls.push([path,options]);if(path.startsWith('/preview?code='))throw Object.assign(Error('source HTTP 429'),{status:502});return {job:{id:'public-collect',status:'pending'},dispatched:true};};
- const first=await deviceRequest('/collect',{body:{code:'6515'}},remote);assert.deepEqual(first.deviceCollection,{code:'6515',owner:'one'});assert.equal(calls[1][0],'/device-collect');assert.deepEqual(calls[1][1].body,{code:'6515'});assert.equal(deviceData().news.length,1);
+ const first=await deviceRequest('/collect',{body:{code:'6515'}},remote);assert.deepEqual(first.deviceCollection,{code:'6515',owner:'one',sourceError:'source HTTP 429'});assert.equal(calls[1][0],'/device-collect');assert.deepEqual(calls[1][1].body,{code:'6515'});assert.equal(deviceData().news.length,1);
  const {finishDeviceCollection}=await import('../src/account-sync.js');await finishDeviceCollection(first.deviceCollection,async path=>{assert.equal(path,'/preview?stored=1&code=6515');return {news:[{company_code:'6515',url:'https://same',title:'穎崴新聞'}]};});assert.equal(deviceData().news.length,2);
  setSyncOwner('two');await assert.rejects(finishDeviceCollection(first.deviceCollection,async()=>{throw Error('must not fetch');}),/登入帳號已變更/);
 });

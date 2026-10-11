@@ -42,7 +42,7 @@ jobs:
       - name: Test schedule recovery and quota handling
         run: |
           python3 -m unittest discover -s tests -p 'test_news_schedule_guard.py' -v
-          python3 -m unittest discover -s tests -p 'test_collect_quota.py' -v
+          python3 -m unittest discover -s tests -p 'test_collect*.py' -v
       - name: Check whether daily news already succeeded
         id: guard
         env:

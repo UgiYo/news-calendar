@@ -24,7 +24,7 @@ class QuotaTests(unittest.TestCase):
    calls.append(path)
    if path=='/admin/tracked':return {'companies':[c]}
    self.fail('Unexpected error status write: '+path)
-  def collect(_):raise self.module.CollectorQuotaError('D1_WRITE_QUOTA','2026-10-07T00:00:00Z')
+  def collect(_,details=None):raise self.module.CollectorQuotaError('D1_WRITE_QUOTA','2026-10-07T00:00:00Z')
   with patch.object(self.module,'api',side_effect=api),patch.object(self.module,'collect',side_effect=collect),patch.dict(os.environ,{'RUN_MODE':'daily'}):
    with self.assertRaises(self.module.CollectorQuotaError):self.module.main()
   self.assertEqual(calls,['/admin/tracked'])

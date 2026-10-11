@@ -22,7 +22,7 @@ test('failed save does not add company or collect news',async()=>{
  await assert.rejects(c.add('2330'),/save failed/);assert.equal(c.state.companies.length,0);assert.equal(collected,false);
 });
 test('batch collection continues after one source failure and reports affected code',async()=>{
- const calls=[],state={user:{id:'user'},companies:[{code:'6515'},{code:'2330'}],message:''};const context=vm.createContext({state,render(){},load:async()=>{},syncEnabled:()=>false,jobRequest:async(path,body)=>{calls.push(body.code);if(body.code==='6515')throw Error('source unavailable');}});
+ const calls=[],state={user:{id:'user'},companies:[{code:'6515'},{code:'2330'}],message:''};const context=vm.createContext({state,render(){},load:async()=>{},syncEnabled:()=>false,jobRequest:async(path,body)=>{calls.push(body.code);if(body.code==='6515')throw Error('source unavailable');return {collected:0};}});
  const start=source.indexOf('async function collect(code){'),end=source.indexOf('\n}',start)+2;vm.runInContext(source.slice(start,end),context);
- await assert.rejects(context.collect(),/6515：source unavailable/);assert.deepEqual(calls,['6515','2330']);assert.match(state.message,/1 檔新聞已更新/);
+ await assert.rejects(context.collect(),/6515：source unavailable/);assert.deepEqual(calls,['6515','2330']);assert.match(state.message,/1 檔查詢已完成/);
 });

@@ -239,3 +239,14 @@ test('device collector queues public news without cloud tracking and exposes onl
  const now=new Date().toISOString();await call(env,'/admin/news','secret',{news:[{company_code:'6515',title:'穎崴最新新聞',url:'https://www.cna.com.tw/story',source:'中央社',published_at:now,news_date:now.slice(0,10)}]});
  const original=globalThis.fetch;globalThis.fetch=async()=>{throw Error('stored read must not call RSS');};try{const result=await (await call(env,'/preview?stored=1&code=6515','alice')).json();assert.equal(result.news.length,1);assert.equal(result.news[0].company_code,'6515');}finally{globalThis.fetch=original;db.close();}
 });
+test('news failures retain HTTP reason and collector history without secrets or cloud tracking',async()=>{
+ const {db,env}=setup();db.prepare('INSERT INTO users VALUES(?,?)').run('alice','a@example.com');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(await hash('alice'),'alice',Date.now()+60000);db.prepare('INSERT INTO companies(code,name,full_name,market) VALUES(?,?,?,?)').run('6515','穎崴','穎崴科技','上市');
+ assert.equal((await call(env,'/admin/collection-company?code=6515','bad')).status,403);
+ assert.equal((await (await call(env,'/admin/collection-company?code=6515','secret')).json()).company.code,'6515');
+ const original=globalThis.fetch;globalThis.fetch=async()=>new Response('blocked',{status:429});try{const response=await call(env,'/preview?code=6515','alice');assert.equal(response.status,502);assert.match((await response.json()).error,/HTTP 429/);}finally{globalThis.fetch=original;}
+ const queued=await (await call(env,'/device-collect','alice',{code:'6515'})).json();
+ await call(env,'/admin/news-attempts','secret',{code:'6515',job_id:queued.job.id,status:'empty',details:{requests:2,collected:0,feed_items:7,rejected_company:7,key:'secret',run_url:'https://github.com/UgiYo/stock-news-calendar/actions/runs/123'}});
+ const history=await (await call(env,'/news-update-history?code=6515','alice')).json();assert.equal(history.attempts.length,3);assert.equal(history.attempts[0].status,'empty');assert.equal(history.attempts[2].details.http_status,429);assert.equal(history.attempts[0].details.key,undefined);
+ const job=await (await call(env,'/device-collect?id='+queued.job.id,'alice')).json();assert.equal(job.attempt.details.collected,0);
+ assert.equal((await call(env,'/news-update-history?code=6515')).status,401);assert.equal(db.prepare('SELECT count(*) n FROM watchlists').get().n,0);db.close();
+});
