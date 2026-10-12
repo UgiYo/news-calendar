@@ -65,3 +65,14 @@ test('changing account stops polling and prevents stale results from reloading',
  const controller=createRankingRefresher({owner:()=>who,request:async()=>{requests++;return {job:{id:'shared',status:'pending'}};},reload:async()=>{reloads++;},onChange:()=>{},wait:async()=>{who='second';}});
  await controller.start();assert.equal(requests,1);assert.equal(reloads,0);assert.equal(controller.state.message,'');assert.equal(controller.state.busy,false);
 });
+
+test('completed background task cannot report UI success when an older date was loaded',async()=>{
+ const controller=createRankingRefresher({owner:()=> 'user',request:async()=>({job:{id:'done',status:'done',data_date:'2026-10-12'}}),reload:async()=>({date:'2026-10-08'}),onChange:()=>{}});
+ await controller.start();assert.match(controller.state.message,/画面|畫面/);assert.match(controller.state.message,/尚未完成載入/);assert.doesNotMatch(controller.state.message,/核對完成/);
+});
+test('same date refresh clearly reports re-read and resume shows actual newer ranking date',async()=>{
+ for(const date of ['2026-10-12','2026-10-13']){
+  const controller=createRankingRefresher({owner:()=> 'user',request:async()=>({job:{id:'done',status:'done',data_date:'2026-10-12'}}),reload:async()=>({date,previousDate:date}),onChange:()=>{}});
+  await controller.resume();assert.ok(controller.state.message.includes(date));assert.match(controller.state.message,/日期未改變/);
+ }
+});

@@ -17,8 +17,11 @@ export function createRankingRefresher({request,reload,owner,onChange,wait=ms=>n
     if(job.status==='failed')throw Error(job.error||'成交值更新失敗，請重試。');
     if(job.status==='done'){
      publish('成交值已更新，正在載入排行榜…');
-     await reload();if(!valid())return;
-     publish(`成交值更新完成，資料日期：${job.data_date||'請見排行榜'}。`);return;
+     const loaded=await reload(job);if(!valid())return;
+     const date=typeof loaded==='string'?loaded:loaded?.date,previousDate=loaded?.previousDate;
+     if(date!==undefined&&(!date||job.data_date&&date<job.data_date))throw Error(`背景資料已更新至 ${job.data_date||'最新日期'}，但畫面仍顯示 ${date||'無資料'}；尚未完成載入，請重試。`);
+     const actual=date||job.data_date||'請見排行榜';
+     publish(`成交值核對完成，已顯示資料日期：${actual}。${previousDate===actual?'日期未改變，已重新讀取最新保存資料。':''}`);return;
     }
     publish(job.status==='running'?'正在取得官方收盤資料並更新排行…':'成交值更新已排入，等待處理…');
     await wait(5000);if(!valid())return;
