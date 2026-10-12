@@ -246,7 +246,7 @@ test('news failures retain HTTP reason and collector history without secrets or 
  const original=globalThis.fetch;globalThis.fetch=async()=>new Response('blocked',{status:429});try{const response=await call(env,'/preview?code=6515','alice');assert.equal(response.status,502);assert.match((await response.json()).error,/HTTP 429/);}finally{globalThis.fetch=original;}
  const queued=await (await call(env,'/device-collect','alice',{code:'6515'})).json();
  await call(env,'/admin/news-attempts','secret',{code:'6515',job_id:queued.job.id,status:'empty',details:{requests:2,collected:0,feed_items:7,rejected_company:7,key:'secret',run_url:'https://github.com/UgiYo/stock-news-calendar/actions/runs/123'}});
- const history=await (await call(env,'/news-update-history?code=6515','alice')).json();assert.equal(history.attempts.length,3);assert.equal(history.attempts[0].status,'empty');assert.equal(history.attempts[2].details.http_status,429);assert.equal(history.attempts[0].details.key,undefined);
+ const history=await (await call(env,'/news-update-history?code=6515','alice')).json();assert.equal(history.attempts.length,3);assert.equal(history.attempts[0].status,'empty');assert.equal(history.attempts[2].details.http_status,429);assert.equal(history.attempts[0].details.key,undefined);assert.equal(history.attempts[0].details.run_url,undefined);assert.ok(JSON.parse(db.prepare('SELECT details FROM news_update_attempts ORDER BY id DESC LIMIT 1').get().details).run_url);
  const job=await (await call(env,'/device-collect?id='+queued.job.id,'alice')).json();assert.equal(job.attempt.details.collected,0);
  assert.equal((await call(env,'/news-update-history?code=6515')).status,401);assert.equal(db.prepare('SELECT count(*) n FROM watchlists').get().n,0);db.close();
 });
