@@ -5,7 +5,7 @@ const key='stock-news-session';
 const quotaGate=createQuotaGate({storage:globalThis.localStorage,key:'stock-d1-pause:'+base});
 export async function api(path,options={}){
  const local=await deviceRequest(path,options,remoteAPI);if(local!==undefined)return local;const data=await remoteAPI(path,options);
- if(syncEnabled()&&path.startsWith('/news?')){data.serverCount=data.news?.length||0;const url=new URL(path,'https://device.invalid'),extra=(deviceData()?.news||[]).filter(n=>n.news_date>=url.searchParams.get('from')&&n.news_date<=url.searchParams.get('to'));if(!Number(url.searchParams.get('offset')||0)){const rows=new Map((data.news||[]).map(n=>[n.url,n]));for(const n of extra)rows.set(n.url,n);data.news=[...rows.values()];data.deviceMerged=true;}}
+ if(syncEnabled()&&path.startsWith('/news?')){data.serverCount=data.news?.length||0;const url=new URL(path,'https://device.invalid'),extra=(deviceData()?.news||[]).filter(n=>n.news_date>=url.searchParams.get('from')&&n.news_date<=url.searchParams.get('to'));if(!Number(url.searchParams.get('offset')||0)){const rows=new Map((data.news||[]).map(n=>[n.company_code+'|'+n.url,n]));for(const n of extra)rows.set(n.company_code+'|'+n.url,n);data.news=[...rows.values()];data.deviceMerged=true;}}
  return data;
 }
 export async function remoteAPI(path,options={}){

@@ -175,3 +175,9 @@ aside>.podcast-controls{margin-top:24px;padding-top:16px;border-top:1px solid va
 .watchrow [data-chart]{grid-column:2;grid-row:1;white-space:nowrap;padding:8px;font-size:14px}
 .watchrow .remove{grid-column:3;grid-row:1;margin:0;padding:6px;white-space:nowrap}
 .watchrow [data-news-history]{grid-column:1/-1;grid-row:2;white-space:nowrap;font-size:12px;padding:6px;margin:0;border-top:1px solid var(--theme-border,#d6e0e8);border-radius:0 0 6px 6px;background:transparent;text-align:left}.news-update-history a{color:var(--theme-accent,#0e777e)}
+
+.market-tabs,.watch-market-filter{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.market-tabs [aria-selected="true"],.watch-market-filter [aria-pressed="true"]{background:var(--theme-accent,#107b84);color:var(--theme-on-accent,#fff);border-color:var(--theme-accent,#107b84)}
+.market-tabs button{min-width:5rem;font-weight:700}
+.market-context{color:var(--theme-text-secondary,#526f85);font-size:.85rem;margin:0 0 1rem}
+.market-badge{display:inline-block;border:1px solid var(--theme-border,#d6e1e8);padding:.1rem .3rem;border-radius:.3rem;font-size:.7rem;white-space:nowrap}

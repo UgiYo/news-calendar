@@ -1,6 +1,14 @@
 """GitHub Actions worker: collect feeds and produce requested article summaries."""
 import os,json,time,re,unicodedata,calendar,socket,ipaddress,datetime,email.utils,xml.etree.ElementTree as ET
 from urllib.parse import urlparse
+from pathlib import Path
+from zoneinfo import ZoneInfo
+US=ZoneInfo('America/New_York')
+US_COMPANIES=json.loads((Path(__file__).resolve().parent.parent/'shared/us-companies.json').read_text())
+US_ALIASES={c['code']:c['aliases'] for c in US_COMPANIES}
+US_SOURCES={'www.reuters.com':'Reuters','reuters.com':'Reuters','www.cnbc.com':'CNBC','cnbc.com':'CNBC','finance.yahoo.com':'Yahoo Finance','www.marketwatch.com':'MarketWatch','marketwatch.com':'MarketWatch'}
+def is_us(c):return str(c.get('code','')).startswith('US:')
+def aliases(c):return list(dict.fromkeys([c['name'],c['full_name']]+US_ALIASES.get(c['code'],[])))
 import requests
 BASE=os.environ['WORKER_API_URL'].rstrip('/')
 SECRET=os.environ['COLLECTOR_SECRET']
@@ -25,7 +33,7 @@ def previous_month(now):
  if m==0:y,m=y-1,12
  return now.replace(year=y,month=m,day=min(now.day,calendar.monthrange(y,m)[1]))
 def trusted_domain(url):
- return {'www.cna.com.tw':'中央社','cna.com.tw':'中央社','www.moneydj.com':'MoneyDJ','moneydj.com':'MoneyDJ','news.cnyes.com':'鉅亨網'}.get((urlparse(url).hostname or '').lower())
+ return {**US_SOURCES,'www.cna.com.tw':'中央社','cna.com.tw':'中央社','www.moneydj.com':'MoneyDJ','moneydj.com':'MoneyDJ','news.cnyes.com':'鉅亨網'}.get((urlparse(url).hostname or '').lower())
 def duplicate_news(a,b):
  if a['company_code']!=b['company_code']:return False
  if a['url']==b['url']:return True
@@ -40,11 +48,15 @@ def duplicate_news(a,b):
  gx={x[i:i+2] for i in range(len(x)-1)};gy={y[i:i+2] for i in range(len(y)-1)}
  return 2*len(gx&gy)/(len(gx)+len(gy))>=.9
 def curate_news(rows):
- rank={'中央社':0,'MoneyDJ':1,'鉅亨網':2};kept=[]
+ rank={'中央社':0,'MoneyDJ':1,'鉅亨網':2,'Reuters':3,'CNBC':4,'Yahoo Finance':5,'MarketWatch':6};kept=[]
  for n in sorted(rows,key=lambda n:(rank[n['source']],n['published_at'])):
   if not any(duplicate_news(k,n) for k in kept):kept.append(n)
  return kept
 def company_mention(title,c,conflicts):
+ if is_us(c):
+  text=unicodedata.normalize('NFKC',title);symbol=c['code'][3:]
+  if any(name and len(name)>=2 and (name in text if re.search(r'[\u3400-\u9fff]',name) else re.search(r'(?<![A-Za-z0-9])'+re.escape(name)+r'(?![A-Za-z0-9])',text,re.I)) for name in aliases(c)):return True
+  return bool(re.search(r'(?:\$|\b(?:NYSE|NASDAQ|ticker)\s*[:：]\s*)'+re.escape(symbol)+r'(?![A-Za-z0-9.-])',text,re.I) or len(symbol)>=2 and symbol not in ('ON','IT','AI','ALL','ARE','CAN','FOR','NOW','ARM','CAT') and re.search(r'(?<![A-Za-z0-9])'+re.escape(symbol)+r'(?![A-Za-z0-9.-])',text))
  if re.search(r'(?<!\d)'+re.escape(c['code'])+r'(?!\d)',title):return True
  cleaned=title
  for name in sorted(set(conflicts+(['台聯電'] if c['code']=='2303' else [])),key=len,reverse=True):
@@ -65,11 +77,14 @@ def collect(c,diagnostics=None):
  while cursor<now:
   end=min(cursor+datetime.timedelta(days=1),now)
   q=f'("{c["name"]}" OR "{c["full_name"]}" OR "{c["code"]}") (site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) after:{(cursor-datetime.timedelta(days=1)).date()} before:{(end+datetime.timedelta(days=1)).date()}'
+  if is_us(c):
+   company_terms=' OR '.join('"'+name.replace('"','')+'"' for name in aliases(c)+[c['code'][3:]])
+   q=f'({company_terms}) (site:reuters.com OR site:cnbc.com OR site:finance.yahoo.com OR site:marketwatch.com OR site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) after:{(cursor-datetime.timedelta(days=1)).date()} before:{(end+datetime.timedelta(days=1)).date()}'
   # Separate broker query improves coverage when broad stock news fills RSS results.
   broker_q=f'("{c["name"]}" OR "{c["full_name"]}" OR "{c["code"]}") (券商 OR 投顧 OR 外資 OR 目標價 OR 評等) (site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) after:{(cursor-datetime.timedelta(days=1)).date()} before:{(end+datetime.timedelta(days=1)).date()}'
-  for query in (q,broker_q):
+  for query in ((q,) if is_us(c) else (q,broker_q)):
    diagnostics['requests']+=1
-   r=requests.get('https://news.google.com/rss/search',params={'q':query,'hl':'zh-TW','gl':'TW','ceid':'TW:zh-Hant'},timeout=30);diagnostics['http_status']=r.status_code
+   r=requests.get('https://news.google.com/rss/search',params={'q':query,'hl':'en-US' if is_us(c) else 'zh-TW','gl':'US' if is_us(c) else 'TW','ceid':'US:en' if is_us(c) else 'TW:zh-Hant'},timeout=30);diagnostics['http_status']=r.status_code
    if not r.ok:raise ValueError('Google News RSS HTTP '+str(r.status_code))
    root=ET.fromstring(r.content)
    if root.find('channel') is None:raise ValueError('Google News RSS 格式異常')
@@ -77,7 +92,7 @@ def collect(c,diagnostics=None):
     diagnostics['feed_items']+=1
     title=item.findtext('title') or '';url=item.findtext('link') or ''
     source_element=item.find('source');source=trusted_domain(source_element.get('url','') if source_element is not None else '')
-    if not source:diagnostics['rejected_source']+=1;continue
+    if not source or not is_us(c) and source not in ('中央社','MoneyDJ','鉅亨網'):diagnostics['rejected_source']+=1;continue
     if not company_mention(title,c,conflicts):diagnostics['rejected_company']+=1;continue
     diagnostics['matched_items']+=1
     try:published=email.utils.parsedate_to_datetime(item.findtext('pubDate')).astimezone(UTC)
@@ -86,7 +101,7 @@ def collect(c,diagnostics=None):
     if not url.startswith('https://'):diagnostics['rejected_url']+=1;continue
     diagnostics['accepted_items']+=1
     if start<=published<=now and url.startswith('https://'):
-     rows[url]={'company_code':c['code'],'title':title,'url':url,'source':source,'published_at':published.isoformat(),'news_date':published.astimezone(TW).date().isoformat()}
+     rows[url]={'company_code':c['code'],'title':title,'url':url,'source':source,'published_at':published.isoformat(),'news_date':published.astimezone(US if is_us(c) else TW).date().isoformat()}
   cursor=end;time.sleep(.2)
  values=curate_news(list(rows.values()))
  for i in range(0,len(values),20):api('/admin/news',{'news':values[i:i+20]})
