@@ -3,10 +3,12 @@ name: Update daily turnover ranking
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/ranking.yml, scripts/repair_rankings.py]
+    paths: [.github/workflows/ranking.yml, scripts/repair_rankings.py, scripts/ranking.py]
   schedule:
     # 08:00 UTC = 16:00 Asia/Taipei. Official source dates remain authoritative.
     - cron: '0 8 * * *'
+    # Recovery pass at 16:30 Taiwan when an official feed is late or transiently unavailable.
+    - cron: '30 8 * * *'
   workflow_dispatch:
     inputs:
       refresh_id:

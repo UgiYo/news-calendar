@@ -12,12 +12,18 @@ def fetch(url):
 def iso_date(value):
  text=re.sub(r'\D','',str(value));y=int(text[:-4]);return datetime.date(y+1911 if y<1911 else y,int(text[-4:-2]),int(text[-2:])).isoformat()
 def normalize(quotes,catalog,market):
- lookup={str(r.get('公司代號',r.get('SecuritiesCompanyCode',''))):r for r in catalog};rows=[]
+ lookup={str(r.get('公司代號',r.get('SecuritiesCompanyCode',''))):r for r in catalog};rows=[];missing=[]
  for r in quotes:
   code=str(r.get('Code',r.get('SecuritiesCompanyCode','')))
   if not re.fullmatch(r'[1-9]\d{3}',code) or code not in lookup:continue
   c=lookup[code];industry=str(c.get('產業別',c.get('SecuritiesIndustryCode',''))).strip().zfill(2)
-  amount=float(str(r.get('TradeValue',r.get('TransactionAmount',0))).replace(',',''))
+  raw_amount=r.get('TradeValue',r.get('TransactionAmount'))
+  amount_text='' if raw_amount is None else str(raw_amount).strip().replace(',','')
+  if amount_text.lower() in ('','-','--','---','none','null','n/a'):
+   missing.append(code);continue
+  try:amount=float(amount_text)
+  except (ValueError,TypeError):raise ValueError('Invalid turnover for '+code) from None
+  if not math.isfinite(amount):raise ValueError('Non-finite turnover for '+code)
   if amount<0:raise ValueError('Negative turnover')
   def numeric(value):
    try:return float(str(value).replace(',',''))
@@ -26,6 +32,7 @@ def normalize(quotes,catalog,market):
   shares=numeric(c.get('已發行普通股數或TDR原股發行股數',c.get('IssueShares',r.get('Capitals'))))
   market_cap=close*shares if close and shares and math.isfinite(close) and math.isfinite(shares) and close>0 and shares>0 else None
   rows.append({'code':code,'name':c.get('公司簡稱',c.get('CompanyAbbreviation','')),'market':market,'tag':INDUSTRIES.get(industry,'產業 '+industry),'amount':amount,'marketCap':market_cap})
+ if missing:print('Missing turnover excluded',market,len(missing),','.join(missing[:20]),flush=True)
  if len(rows)<100:raise ValueError('Incomplete market quote data')
  return rows
 
