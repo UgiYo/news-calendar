@@ -29,6 +29,9 @@ try{
  Object.assign(mod.state,{user:{id:'alice',email:'a@example.test'},companies,news,date:'2026-10-08',year:2026,month:9});mod.render();
  assert.equal(document.querySelector('[data-market="TW"]').getAttribute('aria-selected'),'true');assert.equal(document.querySelectorAll('.watchrow').length,2);assert.ok(document.querySelector('#ranking-tab')&&!document.querySelector('#ranking-tab').hidden);
  assert.ok(document.querySelector('#news-tab-panel').textContent.includes('台積電台股專用新聞'));assert.ok(!document.querySelector('#news-tab-panel').textContent.includes('NVIDIA US only news'));
+ document.querySelector('[data-watch-market="US"]').click();
+ for(let i=0;i<20&&document.querySelector('[data-market="US"]').getAttribute('aria-selected')!=='true';i++)await new Promise(r=>setTimeout(r,5));
+ assert.equal(mod.state.market,'US');assert.equal(document.querySelector('#search-market').value,'US');
  await mod.switchMarket('US');assert.equal(document.querySelector('[data-market="US"]').getAttribute('aria-selected'),'true');assert.equal(document.querySelector('#ranking-tab').hidden,true);assert.ok(document.querySelector('.market-context').textContent.includes('USD'));
  assert.ok(document.querySelector('#news-tab-panel').textContent.includes('NVIDIA US only news'));assert.ok(!document.querySelector('#news-tab-panel').textContent.includes('台積電台股專用新聞'));
  document.querySelector('[data-watch-market="US"]').click();assert.equal(document.querySelectorAll('.watchrow').length,1);assert.ok(document.querySelector('.watchrow').textContent.includes('輝達'));

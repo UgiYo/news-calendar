@@ -434,7 +434,29 @@ async function usCatalog(env, fetcher = fetch) {
   catalogCache = { at: Date.now(), rows };
   return rows;
 }
+async function lookupUSSymbol(query, fetcher = fetch) {
+  const symbol = query.toUpperCase();
+  if (!/^[A-Z][A-Z0-9.-]{0,14}$/.test(symbol)) return null;
+  const providerSymbol = symbol.replace(".", "-");
+  for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) try {
+    const r = await fetcher(`https://${host}/v8/finance/chart/${encodeURIComponent(providerSymbol)}?interval=1d&range=5d`, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }, signal: AbortSignal.timeout(5e3) });
+    if (!r.ok) continue;
+    const m = (await r.json()).chart?.result?.[0]?.meta;
+    if (m?.symbol?.toUpperCase() !== providerSymbol || m.currency !== "USD" || !["EQUITY", "ETF"].includes(m.instrumentType) || !["NMS", "NYQ", "NGM", "NCM", "PCX", "ASE", "BTS", "BATS", "NYSE", "NASDAQ", "NASDAQGS", "NASDAQGM", "NASDAQCM", "NYSEARCA", "CBOE"].includes(String(m.exchangeName || "").toUpperCase())) continue;
+    const name = m.longName || m.shortName;
+    if (typeof name !== "string" || !name.trim()) continue;
+    return enrichCompany({ code: "US:" + symbol, name, full_name: name, exchange: m.exchangeName, market: "\u7F8E\u80A1" });
+  } catch {
+  }
+  return null;
+}
 async function searchUS(q, env, fetcher = fetch) {
+  const key = q.normalize("NFKC").trim().replace(/^(?:US|NASDAQ|NYSE)\s*:\s*/i, "").toLowerCase();
+  if (!key) return { companies: [] };
+  const exact = (c) => [c.symbol, c.name, c.full_name, ...c.aliases || []].some((s) => String(s || "").toLowerCase() === key);
+  const matches = (rows2) => rows2.filter((c) => [c.code, c.symbol, c.name, c.full_name, ...c.aliases || []].some((s) => String(s || "").toLowerCase().includes(key))).sort((a, b) => Number(exact(b)) - Number(exact(a)) || a.code.localeCompare(b.code)).slice(0, 20);
+  const seeded = matches(usCompanies);
+  if (seeded.some(exact)) return { companies: seeded };
   let rows = [...usCompanies], warning = "";
   try {
     const official = await usCatalog(env, fetcher);
@@ -442,10 +464,14 @@ async function searchUS(q, env, fetcher = fetch) {
     for (const c of official) map.set(c.code, c);
     rows = [...map.values()];
   } catch {
-    warning = "SEC \u516C\u53F8\u6E05\u55AE\u66AB\u6642\u7121\u6CD5\u8B80\u53D6\uFF0C\u76EE\u524D\u53EF\u641C\u5C0B\u5167\u5EFA\u5E38\u7528\u7F8E\u80A1\u8207 ETF\u3002";
+    warning = "SEC \u516C\u53F8\u6E05\u55AE\u66AB\u6642\u7121\u6CD5\u8B80\u53D6\uFF0C\u5DF2\u4F7F\u7528\u5E38\u7528\u516C\u53F8\u6E05\u55AE\uFF1B\u80A1\u7968\u4EE3\u865F\u53E6\u5617\u8A66\u884C\u60C5\u4F86\u6E90\u6838\u5C0D\u3002";
   }
-  const key = q.replace(/^US:/i, "").toLowerCase();
-  return { companies: rows.filter((c) => [c.code, c.symbol, c.name, c.full_name, ...c.aliases || []].some((s) => String(s || "").toLowerCase().includes(key))).sort((a, b) => Number(b.symbol.toLowerCase() === key) - Number(a.symbol.toLowerCase() === key) || a.code.localeCompare(b.code)).slice(0, 20), warning };
+  let companies = matches(rows);
+  if (!companies.some((c) => c.symbol?.toLowerCase() === key)) {
+    const lookup = await lookupUSSymbol(key, fetcher);
+    if (lookup) companies = [lookup, ...companies.filter((c) => c.code !== lookup.code)].slice(0, 20);
+  }
+  return { companies, warning };
 }
 function usDailyBars(result, code, now = /* @__PURE__ */ new Date()) {
   const quote = result.indicators?.quote?.[0], adj = result.indicators?.adjclose?.[0]?.adjclose, cutoff = completedMarketDay(now, "US");
@@ -508,7 +534,7 @@ async function usMarketRoute(req, env, { sql, reply, user, parsePreview: parsePr
     const q = (url.searchParams.get("q") || "").trim().slice(0, 60);
     if (!q) return reply({ companies: [] });
     const result = await searchUS(q, env, fetcher);
-    if (result.companies.length) await env.DB.batch(result.companies.map((c) => sql("INSERT INTO companies(code,name,full_name,market) VALUES(?,?,?,?) ON CONFLICT(code) DO UPDATE SET name=excluded.name,full_name=excluded.full_name,market=excluded.market", c.code, c.name, c.full_name, "\u7F8E\u80A1")));
+    if (result.companies.length) await env.DB.batch(result.companies.map((c) => sql("INSERT INTO companies(code,name,full_name,market) VALUES(?,?,?,?) ON CONFLICT(code) DO UPDATE SET name=excluded.name,full_name=excluded.full_name,market=excluded.market WHERE companies.name IS NOT excluded.name OR companies.full_name IS NOT excluded.full_name OR companies.market IS NOT excluded.market", c.code, c.name, c.full_name, "\u7F8E\u80A1")));
     return reply(result);
   }
   if (!isUS(code)) return null;
