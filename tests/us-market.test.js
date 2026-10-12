@@ -97,6 +97,7 @@ test('authenticated API isolates US news and accepts same-account cross-device n
   assert.equal((await (await call('/news?from=2026-10-01&to=2026-10-31','alice')).json()).news.length,1);
   assert.equal((await (await call('/news?from=2026-10-01&to=2026-10-31','bob')).json()).news.length,0);
   const company=(await (await call('/watchlists','alice')).json()).companies[0];assert.equal(company.currency,'USD');assert.ok(company.aliases.includes('輝達'));
+  const preference=await call('/account-settings','alice',{sync_enabled:true});assert.equal(preference.status,200);assert.equal((await (await call('/account-settings','alice')).json()).sync_enabled,true);assert.equal((await (await call('/account-settings','bob')).json()).sync_enabled,null);
   const body=[{company_code:nvda.code,title:'Private NVIDIA news',url:'https://www.cnbc.com/private',source:'CNBC',published_at:'2026-10-08T19:00:00Z',news_date:'2026-10-08'}];
   const sync=await call('/account-news','alice',body);assert.equal(sync.status,200);
   const alice=await (await call('/account-news?from=2026-10-01&to=2026-10-31','alice')).json();assert.equal(alice.news.length,1);

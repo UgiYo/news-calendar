@@ -1,11 +1,15 @@
 import {createQuotaGate} from './d1-quota.js';
-import {deviceRequest,syncEnabled,deviceData,finishDeviceCollection} from './account-sync.js';
+import {deviceRequest,syncEnabled,syncOwner,rememberCloudWatchlist,deviceData,finishDeviceCollection} from './account-sync.js';
 const base=(import.meta.env?.VITE_WORKER_API_URL||'').replace(/\/$/,'');
 const key='stock-news-session';
 const quotaGate=createQuotaGate({storage:globalThis.localStorage,key:'stock-d1-pause:'+base});
 export async function api(path,options={}){
- const local=await deviceRequest(path,options,remoteAPI);if(local!==undefined)return local;const data=await remoteAPI(path,options);
- if(syncEnabled()&&path.startsWith('/news?')){data.serverCount=data.news?.length||0;const url=new URL(path,'https://device.invalid'),extra=(deviceData()?.news||[]).filter(n=>n.news_date>=url.searchParams.get('from')&&n.news_date<=url.searchParams.get('to'));if(!Number(url.searchParams.get('offset')||0)){const rows=new Map((data.news||[]).map(n=>[n.company_code+'|'+n.url,n]));for(const n of extra)rows.set(n.company_code+'|'+n.url,n);data.news=[...rows.values()];data.deviceMerged=true;}}
+ const who=syncOwner(),sessionToken=options.sessionToken??localStorage.getItem(key),request=(target,settings={})=>remoteAPI(target,{...settings,sessionToken});const local=await deviceRequest(path,options,request);if(local!==undefined)return local;const data=await request(path,options);
+ if(who===syncOwner()&&syncEnabled(who)&&path.split('?')[0]==='/watchlists'){
+  if(Array.isArray(data.companies))rememberCloudWatchlist(who,data.companies);
+  else try{const fresh=await request('/watchlists');if(who===syncOwner()&&syncEnabled(who)&&Array.isArray(fresh.companies))rememberCloudWatchlist(who,fresh.companies);}catch{}
+ }
+ if(who===syncOwner()&&syncEnabled(who)&&path.startsWith('/news?')){data.serverCount=data.news?.length||0;const url=new URL(path,'https://device.invalid'),extra=(deviceData(who)?.news||[]).filter(n=>n.news_date>=url.searchParams.get('from')&&n.news_date<=url.searchParams.get('to'));if(!Number(url.searchParams.get('offset')||0)){const rows=new Map((data.news||[]).map(n=>[n.company_code+'|'+n.url,n]));for(const n of extra)rows.set(n.company_code+'|'+n.url,n);data.news=[...rows.values()];data.deviceMerged=true;}}
  return data;
 }
 export async function remoteAPI(path,options={}){

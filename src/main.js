@@ -1,3 +1,4 @@
+import {restoreWatchlistSync,setWatchlistSync} from './watchlist-sync.js';
 import {searchMarket,normalizeSearchQuery} from './company-search.js';
 import {isUS,marketOf,marketDay,marketCompanies,marketLabel,symbolOf,enrichCompany} from '../shared/markets.js';
 import {capturePageScroll,restorePageScroll} from './scroll-view.js';
@@ -235,14 +236,10 @@ app.querySelectorAll('[data-podcast-date]').forEach(b=>b.onclick=()=>{state.date
 app.querySelectorAll('[data-podcast-result]').forEach(b=>b.onclick=()=>openResultsCenter(b.dataset.podcastResult,{focusCode:b.dataset.mentionCode}));
 app.querySelectorAll('[data-podcast-episode]').forEach(b=>b.onclick=()=>openPodcastEpisode(podcast.episodes.find(e=>e.id===b.dataset.podcastEpisode),{userId:state.user?.id||'guest',focusCode:b.dataset.mentionCode}));
 app.querySelector('#account-sync')?.addEventListener('change',e=>{const enabled=e.target.checked;void run(async()=>{
- const who=state.user.id;
- if(enabled){
-  try{await remoteAPI('/account-results');}catch{throw Error('後端尚未啟用帳號成果同步，開關維持關閉。請更新 Cloudflare Worker 後再試。');}
-  const snapshot=deviceData(who),cloud=await remoteAPI('/watchlists');
-  for(const c of snapshot?.companies||[])if(!cloud.companies.some(x=>x.code===c.code))await remoteAPI('/watchlists',{body:{code:c.code}});
-  setSyncEnabled(true,who);try{await syncAccountResults(true);}catch(e){setSyncEnabled(false,who);throw e;}
- }else{saveDeviceData({companies:state.companies,news:[...(deviceData(who)?.news||[]),...state.news].filter((n,i,rows)=>rows.findIndex(x=>x.url===n.url)===i)},who);setSyncEnabled(false,who);}
- monthCache.clear();await load();state.message=enabled?'已開啟追蹤清單與新聞同步；AI 成果持續自動同步至目前帳號。':'已關閉追蹤清單與新聞同步；AI 成果仍可由同一帳號跨裝置查看。';
+ const who=state.user.id,sessionToken=localStorage.getItem('stock-news-session');
+ await setWatchlistSync(enabled,{who,request:(path,options={})=>remoteAPI(path,{...options,sessionToken}),companies:state.companies,news:state.news});
+ monthCache.clear();await load();state.message=enabled?'已開啟此帳號的台股與美股追蹤同步；其他裝置登入或回到網站時會套用同一設定。':'已關閉此帳號的追蹤同步；目前完整清單保存在此裝置。';
+ void syncAccountResults(true).catch(()=>{});
  });});
 app.querySelector('#open-ai-settings').onclick=()=>openAIWindow();
 app.querySelector('#clear-company-filter')?.addEventListener('click',()=>{state.preview=[];state.previewCompany=null;state.selected='';state.message='已顯示全部追蹤公司的新聞。';render();});
@@ -333,7 +330,7 @@ async function collect(code){
 }
 window.addEventListener('account-sync-status',e=>{if(e.detail.who===state.user?.id&&syncEnabled()){const label=app.querySelector('#account-sync-status');if(label)label.textContent=e.detail.message;}});
 let mentionRefreshTimer;for(const event of ['account-result-saved','account-result-deleted','podcast-results-changed'])window.addEventListener(event,e=>{if(event==='account-result-saved'&&(e.detail.row.kind!=='podcast'||!e.detail.row.text||![state.user?.id||'guest','local'].includes(e.detail.who)))return;clearTimeout(mentionRefreshTimer);mentionRefreshTimer=setTimeout(()=>render(),100);});
-render();const initialPodcasts=loadPodcasts();if(configured)run(async()=>{state.user=await restore();if(state.user){try{state.featureFlags=(await api('/features')).features;}catch{state.featureFlags=null;}}render();if(state.user){await initialPodcasts;const migrationError=await migrateLocalPodcastChannels();Object.assign(podcast,podcastPreferences());await loadPodcasts();if(migrationError){podcast.error=migrationError;render();}await Promise.all([load(),loadRanking()]);}});
+render();const initialPodcasts=loadPodcasts();if(configured)run(async()=>{state.user=await restore();if(state.user){setSyncOwner(state.user.id);try{const sessionToken=localStorage.getItem('stock-news-session');await restoreWatchlistSync({who:state.user.id,request:(path,options={})=>remoteAPI(path,{...options,sessionToken})});}catch(e){state.message='追蹤同步設定未能載入，已保留本機資料：'+e.message;}try{state.featureFlags=(await api('/features')).features;}catch{state.featureFlags=null;}}render();if(state.user){await initialPodcasts;const migrationError=await migrateLocalPodcastChannels();Object.assign(podcast,podcastPreferences());await loadPodcasts();if(migrationError){podcast.error=migrationError;render();}await Promise.all([load(),loadRanking()]);}});
 
 function summaryWindow(rows){const groups=Object.groupBy(rows,n=>n.news_date);return `<div class="modal-backdrop"><section class="summary-dialog" id="summary-dialog" role="dialog" aria-modal="true" aria-labelledby="summary-title"><div class="modal-heading"><div><h2 id="summary-title">新聞內文摘要 · ${state.year} 年 ${state.month+1} 月</h2><small>使用上方已設定的個人 AI，先讀取來源內文再生成摘要</small></div><button id="close-summary" aria-label="關閉摘要視窗">×</button></div><div class="stock-actions"><button id="summarize-all" ${!rows.length||!state.user?'disabled':''}>生成本月份多篇新聞總結</button><button id="summary-ai-settings">查看目前 AI 設定</button></div><div class="date-news">${Object.keys(groups).sort().reverse().map(date=>`<section><h3>${esc(date)} · ${groups[date].length} 則</h3><button ${state.user?'':'disabled'} data-ai-day="${esc(date)}">生成當日 AI 總結</button><ul>${groups[date].map(n=>`<li><div class="meta">${esc(n.company_code)} · ${esc(n.source)}</div><a href="${esc(safeURL(n.article_url||n.url))}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a>${n.article_summary?`<span class="summary-label">既有${n.summary_method==='ai'?' AI 摘要':'內文摘錄'}</span><div class="article-summary markdown-preview markdown-body">${renderMarkdown(n.article_summary)}</div>`:''}<button ${state.user?'':'disabled'} data-local-ai="${esc(String((state.previewCompany?state.preview:state.news).filter(n=>marketOf(n)===state.market&&(!state.selected||n.company_code===state.selected)).indexOf(n)))}">讀取內文並生成 AI 摘要</button></li>`).join('')}</ul></section>`).join('')||'<p class="empty">此月份尚無新聞。</p>'}</div></section></div>`;}
 
@@ -372,3 +369,19 @@ async function openNewsUpdateHistory(code){
  try{const result=await api('/news-update-history?code='+encodeURIComponent(code));if(owner!==state.user?.id){dialog.close();return;}dialog.querySelector('p').remove();const statuses={success:'收集完成',empty:'查詢完成・0 則',failed:'失敗',queued:'已排入收集任務'};dialog.querySelector('h2').insertAdjacentHTML('afterend',result.attempts.map(row=>{const d=row.details;return `<article><h3>${esc(new Date(row.created_at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'}))} · ${esc(statuses[row.status]||row.status)}</h3><p>${row.stage==='preview'?'來源直讀':row.stage==='queue'?'任務啟動':'GitHub Actions 收集'}${d.http_status?' · HTTP '+d.http_status:''}${d.collected!==undefined?' · 收集 '+d.collected+' 則':''}</p>${d.error?`<p>${esc(d.error)}</p>`:''}${d.from?`<p>查詢期間：${esc(d.from)} ～ ${esc(d.to||'')}</p>`:''}${d.feed_items!==undefined?`<p>RSS ${d.feed_items} 則 · 符合公司 ${d.matched_items||0} 則 · 排除來源 ${d.rejected_source||0}、公司 ${d.rejected_company||0}、日期 ${d.rejected_date||0}、網址 ${d.rejected_url||0}</p>`:''}</article>`;}).join('')||'<p>尚無詳細更新紀錄；舊版任務未保存這些資料。</p>');}
  catch(e){dialog.querySelector('p').textContent=e.message;}
 }
+
+let watchSyncRunning=false,watchSyncChecked=0;
+async function refreshWatchlistSync(){
+ if(watchSyncRunning||state.busy||!state.user||document.hidden||Date.now()-watchSyncChecked<30000)return;
+ const who=state.user.id,sessionToken=localStorage.getItem('stock-news-session');watchSyncRunning=true;watchSyncChecked=Date.now();
+ try{
+  const result=await restoreWatchlistSync({who,request:(path,options={})=>remoteAPI(path,{...options,sessionToken})});
+  if(state.user?.id!==who)return;
+  const changed=result.changed||result.companies&&JSON.stringify(result.companies.map(c=>c.code).sort())!==JSON.stringify(state.companies.map(c=>c.code).sort());
+  if(changed){const scroll=capturePageScroll();monthCache.clear();await load();if(state.user?.id===who){render();restorePageScroll(scroll);}}
+ }catch(e){if(state.user?.id===who&&accountSettingsOpen){state.message='追蹤同步未完成，已保留現有資料：'+e.message;render();}}
+ finally{watchSyncRunning=false;}
+}
+window.addEventListener('focus',()=>void refreshWatchlistSync());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshWatchlistSync();});
+setInterval(()=>void refreshWatchlistSync(),60000);
