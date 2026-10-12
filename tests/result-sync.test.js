@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {setSyncOwner,syncEnabled} from '../src/account-sync.js';import {setResultOwner,saveResult,resultRecords} from '../src/ai-results.js';import {syncAccountResults} from '../src/result-sync.js';
+import {setSyncOwner,syncEnabled,setSyncEnabled,saveDeviceData,deviceData} from '../src/account-sync.js';import {setResultOwner,saveResult,resultRecords} from '../src/ai-results.js';import {syncAccountResults} from '../src/result-sync.js';
 function storage(){const map=new Map();globalThis.localStorage={get length(){return map.size},key:i=>[...map.keys()][i],getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};localStorage.setItem('stock-news-session','session-one');}
 test('completed results sync automatically with watchlist sync off; older pages load too',async()=>{
  storage();setSyncOwner('one');setResultOwner('one');assert.equal(syncEnabled(),false);saveResult({id:'paid',title:'paid',kind:'news'},{answer:'paid result',state:'complete',updated_at:'2026-10-07T05:00:00Z'},'one');const posts=[],gets=[];
@@ -9,4 +9,15 @@ test('completed results sync automatically with watchlist sync off; older pages 
 test('server identity mismatch and account switch stop uploads before any write',async()=>{
  storage();setSyncOwner('one');setResultOwner('one');const posts=[];globalThis.fetch=async(path,options)=>{if(options.method==='POST')posts.push(path);return Response.json({owner_id:'two',results:[],deleted:[],has_more:false});};await assert.rejects(syncAccountResults(true),/登入身分核對不一致/);assert.equal(posts.length,0);
  globalThis.fetch=async(path,options)=>{if(options.method==='POST')posts.push(path);setSyncOwner('two');setResultOwner('two');localStorage.setItem('stock-news-session','session-two');return Response.json({owner_id:'one',results:[],deleted:[],has_more:false});};await assert.rejects(syncAccountResults(true),/登入帳號已變更/);assert.equal(posts.length,0);assert.ok(resultRecords('two',true).every(r=>r.owner==='two'));
+});
+
+test('both listing-specific news records sync before an unrelated AI result service failure',async()=>{
+ storage();setSyncOwner('one');setResultOwner('one');setSyncEnabled(true);
+ const a={company_code:'2330',title:'台積電新聞',url:'https://same/adr-sync',source:'中央社',published_at:'2026-10-12T01:00:00Z',news_date:'2026-10-12'},b={...a,company_code:'US:TSM'};
+ saveDeviceData({companies:[{code:'2330'},{code:'US:TSM'}],news:[a,b],watchlistBaseline:['2330','US:TSM']});const posted=[];
+ globalThis.fetch=async(path,options)=>{
+  if(path==='/account-news'){if(options.method==='POST'){posted.push(...JSON.parse(options.body));return Response.json({ok:true});}return Response.json({news:[a,b]});}
+  return Response.json({error:'AI service unavailable'},{status:503});
+ };
+ await assert.rejects(syncAccountResults(true),/AI service unavailable/);assert.deepEqual(posted.map(n=>n.company_code),['2330','US:TSM']);assert.equal(deviceData().news.length,2);assert.equal(syncEnabled(),true);assert.deepEqual(deviceData().watchlistBaseline,['2330','US:TSM']);
 });

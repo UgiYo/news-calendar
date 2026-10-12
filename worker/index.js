@@ -1,3 +1,4 @@
+import {accountSettingsRoute} from './account-settings.js';
 import {companyMention,trustedSource,sourceDomain,duplicateNews,isGeneratedAnswer,curateNews} from '../src/news-policy.js';
 import {isUS,validStockCode,enrichCompany,marketDay} from '../shared/markets.js';
 import {saveUSPrices,usMarketRoute} from './us-market.js';
@@ -232,6 +233,7 @@ export default {async fetch(req,env){
  const eventCache=await stockEventCacheRoute(req,{sql,reply,user,randomToken});if(eventCache)return eventCache;
  const usMarket=await usMarketRoute(req,env,{sql,reply,user,parsePreview});if(usMarket)return usMarket;
  const stockEvents=await stockEventsRoute(req,{sql,reply,user,parsePreview,curateNews,companyMention,env});if(stockEvents)return stockEvents;
+ const accountSettings=await accountSettingsRoute(req,{sql,reply,user});if(accountSettings)return accountSettings;
  const accountResults=await accountResultsRoute(req,{sql,reply,user,db:env.DB});if(accountResults)return accountResults;
  const podcasts=await sharedPodcastsRoute(req,{sql,reply,user,hash});if(podcasts)return podcasts;
  if(path==='/portfolio-quotes'){const codes=[...new Set((url.searchParams.get('codes')||'').split(',').filter(Boolean))];if(!codes.length)return reply({quotes:[]});if(codes.length>100||codes.some(c=>!/^\d{4,6}$/.test(c)))return reply({error:'Invalid codes'},400);try{return reply({quotes:(await sql(`SELECT p.code,p.date,p.close FROM prices p WHERE p.code IN (${codes.map(()=>'?').join(',')}) AND p.date=(SELECT MAX(q.date) FROM prices q WHERE q.code=p.code)`,...codes).all()).results});}catch(e){if(String(e.message).includes('no such table'))return reply({quotes:[]});throw e;}}

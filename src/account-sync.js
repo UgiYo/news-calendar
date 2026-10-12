@@ -7,18 +7,37 @@ export function syncEnabled(who=owner){try{return who!=='guest'&&localStorage.ge
 export function setSyncEnabled(enabled,who=owner){localStorage.setItem(prefix(who)+'enabled',String(!!enabled));}
 export function deviceData(who=owner){try{return JSON.parse(localStorage.getItem(prefix(who)+'data'))||null;}catch{return null;}}
 export function saveDeviceData(data,who=owner){localStorage.setItem(prefix(who)+'data',JSON.stringify(data));}
+
+export function mergeNews(...groups){return [...new Map(groups.flat().map(n=>[n.company_code+'|'+n.url,n])).values()];}
+export function rememberCloudWatchlist(who,companies){
+ if(owner!==who||who==='guest')return;
+ const snapshot=deviceData(who)||{};
+ saveDeviceData({...snapshot,companies,news:snapshot.news||[],watchlistBaseline:companies.map(c=>c.code),pendingAdds:[],pendingRemoves:[]},who);
+}
+
 export async function deviceRequest(path,options,remote){
  const who=owner;if(who==='guest'||syncEnabled(who))return undefined;
  const url=new URL(path,'https://device.invalid'),method=options.method||(options.body?'POST':'GET');
  if(!['/watchlists','/news','/prices','/collect'].includes(url.pathname))return undefined;
  let data=deviceData(who);
  if(!data){
-  if(!initializing.has(who))initializing.set(who,(async()=>{const result=await remote('/watchlists');const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10),from=today.slice(0,7)+'-01';const news=[];let offset=0;while(true){const batch=await remote(`/news?from=${from}&to=${today}&offset=${offset}`);news.push(...batch.news);if(batch.news.length<500)break;offset+=500;}const snapshot={companies:result.companies,news};saveDeviceData(snapshot,who);return snapshot;})().finally(()=>initializing.delete(who)));
-  data=await initializing.get(who);
+  if(!initializing.has(who))initializing.set(who,(async()=>{const result=await remote('/watchlists');const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10),from=today.slice(0,7)+'-01';const news=[];let offset=0;while(true){const batch=await remote(`/news?from=${from}&to=${today}&offset=${offset}`);news.push(...batch.news);if(batch.news.length<500)break;offset+=500;}if(owner!==who)throw Error('登入帳號已變更，已停止追蹤同步。');const snapshot={companies:result.companies,news,watchlistBaseline:result.companies.map(c=>c.code),pendingAdds:[],pendingRemoves:[]};saveDeviceData(snapshot,who);return snapshot;})().finally(()=>initializing.delete(who)));
+  data=await initializing.get(who);if(owner!==who)throw Error('登入帳號已變更，已停止追蹤同步。');
  }
  if(url.pathname==='/watchlists'){
-  if(method==='POST'){const code=options.body.code;if(!data.companies.some(c=>c.code===code)){const result=await remote('/companies?q='+encodeURIComponent(code));const c=result.companies.find(c=>c.code===code);if(!c)throw Error('公司不存在');data.companies.push(c);}}
-  if(method==='DELETE'){data.companies=data.companies.filter(c=>c.code!==url.searchParams.get('code'));}
+  if(method==='POST'){
+   const code=options.body.code;
+   if(!data.companies.some(c=>c.code===code)){
+    const result=await remote('/companies?q='+encodeURIComponent(code));if(owner!==who)throw Error('登入帳號已變更，已停止追蹤同步。');
+    const c=result.companies.find(c=>c.code===code);if(!c)throw Error('公司不存在');
+    data=deviceData(who)||data;if(!data.companies.some(c=>c.code===code))data.companies.push(c);
+    data.pendingAdds=[...new Set([...(data.pendingAdds||[]),code])];data.pendingRemoves=(data.pendingRemoves||[]).filter(c=>c!==code);
+   }
+  }
+  if(method==='DELETE'){
+   const code=url.searchParams.get('code');data.companies=data.companies.filter(c=>c.code!==code);
+   data.pendingAdds=(data.pendingAdds||[]).filter(c=>c!==code);data.pendingRemoves=[...new Set([...(data.pendingRemoves||[]),code])];
+  }
   if(method!=='GET')saveDeviceData(data,who);
   return method==='GET'?{companies:data.companies}:{ok:true};
  }

@@ -10,8 +10,9 @@ localStorage.setItem('stock-news-session','alice');localStorage.setItem('stock-a
 const intervals=globalThis.setInterval;globalThis.setInterval=()=>0;
 const companies=[{code:'2330',name:'台積電',full_name:'台灣積體電路',market:'上市'},{code:'US:NVDA',name:'輝達',full_name:'NVIDIA',market:'美股'}];
 const news=[{company_code:'2330',news_date:'2026-10-08',published_at:'2026-10-08T01:00:00Z',title:'台積電台股專用新聞',source:'中央社',url:'https://www.cna.com.tw/tw'},{company_code:'US:NVDA',news_date:'2026-10-08',published_at:'2026-10-08T18:00:00Z',title:'NVIDIA US only news',source:'Reuters',url:'https://www.reuters.com/us'}];
-const calls=[];globalThis.fetch=async(value,options={})=>{const u=new URL(value,'https://ui.test');calls.push(u.pathname+u.search);let result={};
+let accountSyncEnabled=true;const calls=[];globalThis.fetch=async(value,options={})=>{const u=new URL(value,'https://ui.test');calls.push(u.pathname+u.search);let result={};
  if(u.pathname==='/watchlists')result={companies};
+ if(u.pathname==='/account-settings'){if(options.body)accountSyncEnabled=JSON.parse(options.body).sync_enabled;result={owner_id:'alice',sync_enabled:accountSyncEnabled};}
  if(u.pathname==='/news')result={news};
  if(u.pathname==='/stock-movements')result={owner_id:'alice',movements:[]};
  if(u.pathname==='/prices'||u.pathname==='/chart-prices')result={prices:[],source:'fixture'};
@@ -39,5 +40,12 @@ try{
  mod.state.query='NVDA';await mod.search();assert.ok(calls.some(p=>p.includes('/prices?code=US%3ANVDA')));assert.equal(mod.state.selected,'US:NVDA');
  await mod.openRankingStock('US:NVDA');assert.ok(document.querySelector('#stock-ranking-title').textContent.includes('美股走勢（USD）'));assert.equal(document.querySelector('[data-candle-period="1m"]'),null);assert.ok(document.querySelector('[data-candle-period="day"]'));
  document.querySelector('#close-stock-ranking').click();await mod.switchMarket('TW');assert.equal(document.querySelector('#ranking-tab').hidden,false);
+ document.querySelector('[data-watch-market="US"]').click();await new Promise(r=>setTimeout(r,10));document.querySelector('#open-account-settings').click();
+ const toggle=()=>document.querySelector('#account-sync');toggle().checked=false;toggle().dispatchEvent(new window.Event('change',{bubbles:true}));
+ for(let i=0;i<100&&!mod.state.message.includes('已關閉此帳號');i++)await new Promise(r=>setTimeout(r,5));
+ assert.ok(mod.state.message.includes('已關閉此帳號'));assert.equal(accountSyncEnabled,false);assert.equal(mod.state.companies.length,2);
+ const snapshot=JSON.parse(localStorage.getItem('stock-account-sync:alice:data'));assert.deepEqual(snapshot.companies.map(c=>c.code),['2330','US:NVDA']);
+ toggle().checked=true;toggle().dispatchEvent(new window.Event('change',{bubbles:true}));for(let i=0;i<100&&!mod.state.message.includes('已開啟此帳號');i++)await new Promise(r=>setTimeout(r,5));
+ assert.ok(mod.state.message.includes('已開啟此帳號'));assert.equal(accountSyncEnabled,true);assert.equal(mod.state.companies.length,2);
  console.log('US market DOM integration passed: tabs, isolated news, mixed watchlist, filters, per-market dates, search and daily candle dialog.');
 }finally{globalThis.setInterval=intervals;}
