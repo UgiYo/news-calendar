@@ -1,0 +1,25 @@
+name: Refresh US market daily prices
+on:
+  schedule:
+    # 22:30 UTC = next day 06:30 Taiwan, after both EDT and EST core closes.
+    - cron: '30 22 * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: us-market-prices
+  cancel-in-progress: false
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      WORKER_API_URL: ${{ vars.WORKER_API_URL }}
+      COLLECTOR_SECRET: ${{ secrets.COLLECTOR_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Update completed US daily bars and adjusted closes
+        run: node scripts/us_market_prices.mjs

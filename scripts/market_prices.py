@@ -43,7 +43,7 @@ def fetch_month(code,date,market='上市'):
 def main():
  from concurrent.futures import ThreadPoolExecutor
  now=datetime.datetime.now(TW).date();companies=api('/admin/chart-codes')['companies'];failed=[]
- companies=[{'code':'TAIEX','market':'上市'}]+companies
+ companies=[{'code':'TAIEX','market':'上市'}]+[c for c in companies if not c['code'].startswith('US:')]
  def update(c):
   code=c['code'];saved=0
   try:

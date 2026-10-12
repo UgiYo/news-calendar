@@ -1,3 +1,402 @@
+// shared/us-companies.json
+var us_companies_default = [
+  {
+    code: "US:NVDA",
+    symbol: "NVDA",
+    name: "\u8F1D\u9054",
+    full_name: "NVIDIA",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u8F1D\u9054",
+      "NVIDIA",
+      "\u82F1\u5049\u9054"
+    ]
+  },
+  {
+    code: "US:AAPL",
+    symbol: "AAPL",
+    name: "\u860B\u679C",
+    full_name: "Apple",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u860B\u679C",
+      "Apple"
+    ]
+  },
+  {
+    code: "US:MSFT",
+    symbol: "MSFT",
+    name: "\u5FAE\u8EDF",
+    full_name: "Microsoft",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u5FAE\u8EDF",
+      "Microsoft"
+    ]
+  },
+  {
+    code: "US:AMZN",
+    symbol: "AMZN",
+    name: "\u4E9E\u99AC\u905C",
+    full_name: "Amazon",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u4E9E\u99AC\u905C",
+      "Amazon"
+    ]
+  },
+  {
+    code: "US:GOOGL",
+    symbol: "GOOGL",
+    name: "Alphabet",
+    full_name: "Google",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "Alphabet",
+      "Google",
+      "\u8C37\u6B4C"
+    ]
+  },
+  {
+    code: "US:META",
+    symbol: "META",
+    name: "Meta",
+    full_name: "Facebook",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "Meta",
+      "Facebook",
+      "\u81C9\u66F8"
+    ]
+  },
+  {
+    code: "US:TSLA",
+    symbol: "TSLA",
+    name: "\u7279\u65AF\u62C9",
+    full_name: "Tesla",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u7279\u65AF\u62C9",
+      "Tesla"
+    ]
+  },
+  {
+    code: "US:AMD",
+    symbol: "AMD",
+    name: "\u8D85\u5FAE",
+    full_name: "Advanced Micro Devices",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u8D85\u5FAE",
+      "Advanced Micro Devices"
+    ]
+  },
+  {
+    code: "US:AVGO",
+    symbol: "AVGO",
+    name: "\u535A\u901A",
+    full_name: "Broadcom",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u535A\u901A",
+      "Broadcom"
+    ]
+  },
+  {
+    code: "US:TSM",
+    symbol: "TSM",
+    name: "\u53F0\u7A4D\u96FB ADR",
+    full_name: "Taiwan Semiconductor Manufacturing",
+    market: "\u7F8E\u80A1",
+    exchange: "NYSE",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u53F0\u7A4D\u96FB ADR",
+      "Taiwan Semiconductor Manufacturing",
+      "\u53F0\u7A4D\u96FB",
+      "TSMC"
+    ]
+  },
+  {
+    code: "US:MU",
+    symbol: "MU",
+    name: "\u7F8E\u5149",
+    full_name: "Micron Technology",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u7F8E\u5149",
+      "Micron Technology"
+    ]
+  },
+  {
+    code: "US:INTC",
+    symbol: "INTC",
+    name: "\u82F1\u7279\u723E",
+    full_name: "Intel",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u82F1\u7279\u723E",
+      "Intel"
+    ]
+  },
+  {
+    code: "US:QCOM",
+    symbol: "QCOM",
+    name: "\u9AD8\u901A",
+    full_name: "Qualcomm",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u9AD8\u901A",
+      "Qualcomm"
+    ]
+  },
+  {
+    code: "US:ARM",
+    symbol: "ARM",
+    name: "\u5B89\u8B00",
+    full_name: "Arm Holdings",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u5B89\u8B00",
+      "Arm Holdings"
+    ]
+  },
+  {
+    code: "US:NFLX",
+    symbol: "NFLX",
+    name: "Netflix",
+    full_name: "\u7DB2\u98DB",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "Netflix",
+      "\u7DB2\u98DB"
+    ]
+  },
+  {
+    code: "US:PLTR",
+    symbol: "PLTR",
+    name: "Palantir",
+    full_name: "\u5E15\u862D\u63D0\u723E",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "Palantir",
+      "\u5E15\u862D\u63D0\u723E"
+    ]
+  },
+  {
+    code: "US:COIN",
+    symbol: "COIN",
+    name: "Coinbase",
+    full_name: "Coinbase Global",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "Coinbase",
+      "Coinbase Global"
+    ]
+  },
+  {
+    code: "US:BRK.B",
+    symbol: "BRK.B",
+    name: "\u6CE2\u514B\u590F B \u80A1",
+    full_name: "Berkshire Hathaway",
+    market: "\u7F8E\u80A1",
+    exchange: "NYSE",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u6CE2\u514B\u590F B \u80A1",
+      "Berkshire Hathaway"
+    ]
+  },
+  {
+    code: "US:JPM",
+    symbol: "JPM",
+    name: "\u6469\u6839\u5927\u901A",
+    full_name: "JPMorgan Chase",
+    market: "\u7F8E\u80A1",
+    exchange: "NYSE",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u6469\u6839\u5927\u901A",
+      "JPMorgan Chase"
+    ]
+  },
+  {
+    code: "US:SPY",
+    symbol: "SPY",
+    name: "\u6A19\u666E500 ETF",
+    full_name: "SPDR S&P 500 ETF Trust",
+    market: "\u7F8E\u80A1",
+    exchange: "NYSE Arca",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "\u6A19\u666E500 ETF",
+      "SPDR S&P 500 ETF Trust"
+    ]
+  },
+  {
+    code: "US:QQQ",
+    symbol: "QQQ",
+    name: "Nasdaq 100 ETF",
+    full_name: "Invesco QQQ Trust",
+    market: "\u7F8E\u80A1",
+    exchange: "NASDAQ",
+    currency: "USD",
+    timezone: "America/New_York",
+    aliases: [
+      "Nasdaq 100 ETF",
+      "Invesco QQQ Trust"
+    ]
+  }
+];
+
+// shared/markets.js
+var isUS = (code) => /^US:[A-Z][A-Z0-9.-]{0,14}$/.test(String(code || ""));
+var validStockCode = (code) => /^\d{4,6}$/.test(String(code || "")) || isUS(code);
+var marketOf = (value) => isUS(typeof value === "string" ? value : value?.company_code || value?.code) ? "US" : "TW";
+var symbolOf = (code) => isUS(code) ? code.slice(3) : code;
+function marketDay(now = /* @__PURE__ */ new Date(), market = "TW") {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: market === "US" ? "America/New_York" : "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+function marketParts(now = /* @__PURE__ */ new Date(), market = "TW") {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: market === "US" ? "America/New_York" : "Asia/Taipei", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(now).map((p) => [p.type, p.value]));
+  return { day: `${parts.year}-${parts.month}-${parts.day}`, minute: Number(parts.hour) * 60 + Number(parts.minute) };
+}
+function completedMarketDay(now = /* @__PURE__ */ new Date(), market = "TW") {
+  const p = marketParts(now, market);
+  let day = p.day;
+  if (p.minute < (market === "US" ? 960 : 810)) day = new Date(Date.parse(day + "T00:00:00Z") - 864e5).toISOString().slice(0, 10);
+  if (market === "US") while ([0, 6].includes((/* @__PURE__ */ new Date(day + "T00:00:00Z")).getUTCDay())) day = new Date(Date.parse(day + "T00:00:00Z") - 864e5).toISOString().slice(0, 10);
+  return day;
+}
+var usCompanies = us_companies_default;
+function enrichCompany(c) {
+  if (!c || !isUS(c.code)) return c;
+  const seed = usCompanies.find((s) => s.code === c.code);
+  return { ...seed, ...c, symbol: symbolOf(c.code), market: "\u7F8E\u80A1", currency: "USD", timezone: "America/New_York", aliases: seed?.aliases || [c.name, c.full_name].filter(Boolean) };
+}
+function companyAliases(c) {
+  return [...new Set([c.name, c.full_name, ...c.aliases || []].filter(Boolean))];
+}
+function usMention(title, c) {
+  const text = String(title || "").normalize("NFKC"), escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const nameMatch = companyAliases(enrichCompany(c)).filter((n) => n.length >= 2).some((n) => /[\u3400-\u9fff]/.test(n) ? text.includes(n) : new RegExp("(?<![A-Za-z0-9])" + escape(n) + "(?![A-Za-z0-9])", "i").test(text));
+  const symbol = symbolOf(c.code);
+  const ticker = new RegExp("(?:\\$|\\b(?:NYSE|NASDAQ|ticker)\\s*[:\uFF1A]\\s*)" + escape(symbol) + "(?![A-Za-z0-9.-])", "i");
+  return nameMatch || ticker.test(text) || symbol.length >= 2 && !["ON", "IT", "AI", "ALL", "ARE", "CAN", "FOR", "NOW", "ARM", "CAT"].includes(symbol) && new RegExp("(?<![A-Za-z0-9])" + escape(symbol) + "(?![A-Za-z0-9.-])").test(text);
+}
+var US_NEWS_DOMAINS = { "www.reuters.com": "Reuters", "reuters.com": "Reuters", "www.cnbc.com": "CNBC", "cnbc.com": "CNBC", "finance.yahoo.com": "Yahoo Finance", "www.marketwatch.com": "MarketWatch", "marketwatch.com": "MarketWatch" };
+function newsQuery(c, range = "when:1m") {
+  const names = companyAliases(enrichCompany(c)).filter((n) => n.length >= 2).map((n) => '"' + n.replaceAll('"', "") + '"');
+  const us = isUS(c.code);
+  return "(" + [...names, '"' + symbolOf(c.code) + '"'].join(" OR ") + ") " + (us ? "(site:reuters.com OR site:cnbc.com OR site:finance.yahoo.com OR site:marketwatch.com OR site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com)" : "(site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com)") + " " + range;
+}
+
+// src/news-policy.js
+function companyMention(title, company, conflicts = []) {
+  if (isUS(company.code)) return usMention(title, company);
+  const text = String(title || "").normalize("NFKC");
+  if (new RegExp("(?<!\\d)" + company.code + "(?!\\d)").test(text)) return true;
+  let cleaned = text;
+  const names = [...conflicts, ...company.code === "2303" ? ["\u53F0\u806F\u96FB"] : []];
+  for (const name of [...new Set(names)].sort((a, b) => b.length - a.length)) if (name && name !== company.name) cleaned = cleaned.split(name).join(" ");
+  return [company.name, company.full_name].filter((n) => n && n.length >= 2).some((n) => cleaned.includes(n));
+}
+function trustedSource(source) {
+  const key = String(source || "").normalize("NFKC").replace(/\s/g, "").toLowerCase();
+  return { "\u4E2D\u592E\u793E": "\u4E2D\u592E\u793E", "\u4E2D\u592E\u793Ecna": "\u4E2D\u592E\u793E", "cna": "\u4E2D\u592E\u793E", "moneydj": "MoneyDJ", "moneydj\u7406\u8CA1\u7DB2": "MoneyDJ", "\u9245\u4EA8\u7DB2": "\u9245\u4EA8\u7DB2", "\u9245\u4EA8": "\u9245\u4EA8\u7DB2", "anue\u9245\u4EA8": "\u9245\u4EA8\u7DB2", "anue\u9245\u4EA8\u7DB2": "\u9245\u4EA8\u7DB2", "reuters": "Reuters", "cnbc": "CNBC", "yahoofinance": "Yahoo Finance", "marketwatch": "MarketWatch" }[key] || null;
+}
+function sourceDomain(value) {
+  try {
+    const h = new URL(value).hostname.toLowerCase();
+    return { ...US_NEWS_DOMAINS, "www.cna.com.tw": "\u4E2D\u592E\u793E", "cna.com.tw": "\u4E2D\u592E\u793E", "www.moneydj.com": "MoneyDJ", "moneydj.com": "MoneyDJ", "news.cnyes.com": "\u9245\u4EA8\u7DB2" }[h] || null;
+  } catch {
+    return null;
+  }
+}
+var normalizedTitle = (n) => String(n.title || "").replace(/\s*[-–—|]\s*(中央社(?: CNA)?|MoneyDJ(?:理財網)?|(?:Anue)?鉅亨(?:網)?)\s*$/i, "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+function duplicateNews(a, b) {
+  if (a.company_code !== b.company_code) return false;
+  if (a.url === b.url) return true;
+  if (Math.abs(Date.parse(a.published_at) - Date.parse(b.published_at)) > 48 * 36e5) return false;
+  const x = normalizedTitle(a), y = normalizedTitle(b);
+  if (!x || !y) return false;
+  const nums = (n) => (String(n.title || "").normalize("NFKC").match(/\d+(?:[.,]\d+)*/g) || []).sort().join("|");
+  if (nums(a) !== nums(b)) return false;
+  if (x === y) return true;
+  if (Math.min(x.length, y.length) < 12) return false;
+  const grams = (s) => new Set(Array.from({ length: s.length - 1 }, (_, i) => s.slice(i, i + 2)));
+  const gx = grams(x), gy = grams(y);
+  const common = [...gx].filter((g) => gy.has(g)).length;
+  return 2 * common / (gx.size + gy.size) >= 0.9;
+}
+function isGeneratedAnswer(value) {
+  try {
+    const u = new URL(value);
+    return ["news.cnyes.com", "gfe-desktop.cnyes.com"].includes(u.hostname) && u.pathname.startsWith("/news/aigc/");
+  } catch {
+    return false;
+  }
+}
+function curateNews(rows) {
+  const rank = { "\u4E2D\u592E\u793E": 0, "MoneyDJ": 1, "\u9245\u4EA8\u7DB2": 2, "Reuters": 3, "CNBC": 4, "Yahoo Finance": 5, "MarketWatch": 6 };
+  const candidates = rows.filter((n) => trustedSource(n.source) && (isUS(n.company_code) || ["\u4E2D\u592E\u793E", "MoneyDJ", "\u9245\u4EA8\u7DB2"].includes(trustedSource(n.source))) && !isGeneratedAnswer(n.article_url || n.url)).map((n) => ({ ...n, source: trustedSource(n.source) })).sort((a, b) => Number(!!b.article_summary) - Number(!!a.article_summary) || rank[a.source] - rank[b.source] || String(b.published_at).localeCompare(String(a.published_at)));
+  const kept = [];
+  for (const n of candidates) if (!kept.some((k) => duplicateNews(k, n))) kept.push(n);
+  return kept.sort((a, b) => String(b.published_at).localeCompare(String(a.published_at)));
+}
+
 // worker/news-diagnostics.js
 var fields = ["requests", "feed_items", "matched_items", "accepted_items", "collected", "http_status", "rejected_source", "rejected_company", "rejected_date", "rejected_url"];
 async function recordNewsAttempt(sql, { code, jobId = null, stage, status, details = {} }) {
@@ -20,6 +419,140 @@ async function newsAttempts(sql, { code, jobId } = {}) {
     if (String(e.message).includes("no such table")) return [];
     throw e;
   }
+}
+
+// worker/us-market.js
+var catalogCache = null;
+var secHeaders = (env) => ({ "User-Agent": env.SEC_USER_AGENT || "StockNewsCalendar https://github.com/UgiYo/stock-news-calendar", "Accept": "application/json" });
+async function usCatalog(env, fetcher = fetch) {
+  if (catalogCache && Date.now() - catalogCache.at < 864e5) return catalogCache.rows;
+  const r = await fetcher("https://www.sec.gov/files/company_tickers_exchange.json", { headers: secHeaders(env), signal: AbortSignal.timeout(1e4) });
+  if (!r.ok) throw Error("SEC \u516C\u53F8\u6E05\u55AE HTTP " + r.status);
+  const data = await r.json(), fields4 = data.fields;
+  if (!Array.isArray(fields4) || !Array.isArray(data.data)) throw Error("SEC \u516C\u53F8\u6E05\u55AE\u683C\u5F0F\u7570\u5E38");
+  const rows = data.data.map((row) => Object.fromEntries(fields4.map((f, i) => [f, row[i]]))).filter((c) => ["Nasdaq", "NYSE", "CBOE"].includes(c.exchange)).map((c) => enrichCompany({ code: "US:" + c.ticker.replace("-", "."), name: usCompanies.find((s) => s.symbol === c.ticker.replace("-", "."))?.name || c.name, full_name: c.name, market: "\u7F8E\u80A1", exchange: c.exchange, cik: String(c.cik).padStart(10, "0") })).filter((c) => isUS(c.code));
+  catalogCache = { at: Date.now(), rows };
+  return rows;
+}
+async function searchUS(q, env, fetcher = fetch) {
+  let rows = [...usCompanies], warning = "";
+  try {
+    const official = await usCatalog(env, fetcher);
+    const map = new Map(rows.map((c) => [c.code, c]));
+    for (const c of official) map.set(c.code, c);
+    rows = [...map.values()];
+  } catch {
+    warning = "SEC \u516C\u53F8\u6E05\u55AE\u66AB\u6642\u7121\u6CD5\u8B80\u53D6\uFF0C\u76EE\u524D\u53EF\u641C\u5C0B\u5167\u5EFA\u5E38\u7528\u7F8E\u80A1\u8207 ETF\u3002";
+  }
+  const key = q.replace(/^US:/i, "").toLowerCase();
+  return { companies: rows.filter((c) => [c.code, c.symbol, c.name, c.full_name, ...c.aliases || []].some((s) => String(s || "").toLowerCase().includes(key))).sort((a, b) => Number(b.symbol.toLowerCase() === key) - Number(a.symbol.toLowerCase() === key) || a.code.localeCompare(b.code)).slice(0, 20), warning };
+}
+function usDailyBars(result, code, now = /* @__PURE__ */ new Date()) {
+  const quote = result.indicators?.quote?.[0], adj = result.indicators?.adjclose?.[0]?.adjclose, cutoff = completedMarketDay(now, "US");
+  return (result.timestamp || []).flatMap((t, i) => {
+    const date = marketDay(new Date(t * 1e3), "US"), [open, high, low, close] = ["open", "high", "low", "close"].map((k) => quote?.[k]?.[i]);
+    if (date > cutoff || ![open, high, low, close].every((v) => Number.isFinite(v) && v > 0) || low > Math.min(open, close) || high < Math.max(open, close)) return [];
+    return [{ code, date, open, high, low, close, volume: Number.isFinite(quote?.volume?.[i]) ? quote.volume[i] : null, adjusted_close: Number.isFinite(adj?.[i]) && adj[i] > 0 ? adj[i] : null }];
+  });
+}
+async function fetchUSPrices(code, fetcher = fetch) {
+  const symbol = symbolOf(code).replace(".", "-");
+  let lastError;
+  for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) try {
+    const r = await fetcher(`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2y&includePrePost=false&events=div%2Csplits`, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }, signal: AbortSignal.timeout(1e4) });
+    if (!r.ok) throw Error("\u884C\u60C5 HTTP " + r.status);
+    const result = (await r.json()).chart?.result?.[0];
+    if (result?.meta?.symbol?.toUpperCase() !== symbol) throw Error("\u884C\u60C5\u4EE3\u865F\u4E0D\u7B26");
+    const rows = usDailyBars(result, code);
+    if (!rows.length) throw Error("\u5C1A\u7121\u5DF2\u6536\u76E4\u884C\u60C5");
+    return { rows, source: "Yahoo Finance", currency: "USD", timezone: "America/New_York" };
+  } catch (e) {
+    lastError = e;
+  }
+  throw Error("\u7F8E\u80A1\u884C\u60C5\u66AB\u6642\u7121\u6CD5\u53D6\u5F97\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\uFF1A" + lastError.message);
+}
+async function ensureUSPrices(sql) {
+  await sql("CREATE TABLE IF NOT EXISTS prices(code TEXT NOT NULL,date TEXT NOT NULL,open REAL,high REAL,low REAL,close REAL NOT NULL,volume REAL,PRIMARY KEY(code,date))").run();
+  await sql("CREATE TABLE IF NOT EXISTS us_price_facts(code TEXT NOT NULL,date TEXT NOT NULL,adjusted_close REAL,source TEXT,updated_at INTEGER,PRIMARY KEY(code,date))").run();
+}
+async function readUSPrices(sql, code) {
+  await ensureUSPrices(sql);
+  return (await sql("SELECT p.*,f.adjusted_close,f.source,f.updated_at FROM prices p LEFT JOIN us_price_facts f ON p.code=f.code AND p.date=f.date WHERE p.code=? AND p.date>=date('now','-2 years') ORDER BY p.date", code).all()).results;
+}
+async function saveUSPrices(sql, db, rows, source = "Yahoo Finance") {
+  await ensureUSPrices(sql);
+  const at = Date.now();
+  for (let i = 0; i < rows.length; i += 20) await db.batch(rows.slice(i, i + 20).flatMap((p) => [
+    sql("INSERT INTO prices(code,date,open,high,low,close,volume) VALUES(?,?,?,?,?,?,?) ON CONFLICT(code,date) DO UPDATE SET open=excluded.open,high=excluded.high,low=excluded.low,close=excluded.close,volume=excluded.volume", p.code, p.date, p.open, p.high, p.low, p.close, p.volume),
+    sql("INSERT INTO us_price_facts(code,date,adjusted_close,source,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(code,date) DO UPDATE SET adjusted_close=excluded.adjusted_close,source=excluded.source,updated_at=excluded.updated_at", p.code, p.date, p.adjusted_close ?? null, source, at)
+  ]));
+}
+async function fetchUSFilings(company, env, fetcher = fetch) {
+  const c = company.cik ? company : (await usCatalog(env, fetcher)).find((c2) => c2.code === company.code);
+  if (!c?.cik) return [];
+  const r = await fetcher(`https://data.sec.gov/submissions/CIK${c.cik}.json`, { headers: secHeaders(env), signal: AbortSignal.timeout(1e4) });
+  if (!r.ok) throw Error("SEC \u516C\u544A HTTP " + r.status);
+  const data = await r.json();
+  if (String(data.cik).padStart(10, "0") !== c.cik) throw Error("SEC \u516C\u53F8\u8B58\u5225\u4E0D\u7B26");
+  const recent = data.filings?.recent || {};
+  return (recent.accessionNumber || []).flatMap((n, i) => {
+    const form = recent.form?.[i], date = recent.filingDate?.[i], document = recent.primaryDocument?.[i];
+    if (!["10-K", "10-Q", "8-K", "20-F", "6-K"].includes(form) || !/^\d{4}-\d{2}-\d{2}$/.test(date || "") || !document) return [];
+    return [{ company_code: company.code, title: `${company.name} \xB7 ${form} \u516C\u53F8\u7533\u5831`, source: "SEC EDGAR", news_date: date, published_at: recent.acceptanceDateTime?.[i] || null, url: `https://www.sec.gov/Archives/edgar/data/${Number(c.cik)}/${n.replaceAll("-", "")}/${encodeURIComponent(document)}`, form, evidence_kind: "filing_metadata" }];
+  }).slice(0, 40);
+}
+async function usMarketRoute(req, env, { sql, reply, user, parsePreview: parsePreview2, fetcher = fetch }) {
+  const url = new URL(req.url), path = url.pathname, code = url.searchParams.get("code");
+  if (path === "/companies" && (url.searchParams.get("market") === "US" || /^US:/i.test(url.searchParams.get("q") || ""))) {
+    if (req.method !== "GET") return reply({ error: "Method not allowed" }, 405);
+    const q = (url.searchParams.get("q") || "").trim().slice(0, 60);
+    if (!q) return reply({ companies: [] });
+    const result = await searchUS(q, env, fetcher);
+    if (result.companies.length) await env.DB.batch(result.companies.map((c) => sql("INSERT INTO companies(code,name,full_name,market) VALUES(?,?,?,?) ON CONFLICT(code) DO UPDATE SET name=excluded.name,full_name=excluded.full_name,market=excluded.market", c.code, c.name, c.full_name, "\u7F8E\u80A1")));
+    return reply(result);
+  }
+  if (!isUS(code)) return null;
+  if (!user?.id) return reply({ error: "\u8ACB\u5148\u767B\u5165" }, 401);
+  const company = enrichCompany(await sql("SELECT * FROM companies WHERE code=?", code).first());
+  if (!company) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728\uFF0C\u8ACB\u5148\u641C\u5C0B\u4E26\u8FFD\u8E64" }, 404);
+  if (path === "/ranking-stock") return reply({ stock: company, history: [], market: "US" });
+  if (path === "/company-profile") return reply({ profile: { code, heading: symbolOf(code) + " " + company.name, introduction: company.full_name, metrics: [{ label: "\u4EA4\u6613\u5E02\u5834", value: company.exchange || "\u7F8E\u80A1" }, { label: "\u8A08\u50F9\u5E63\u5225", value: "USD" }], source: "\u516C\u53F8\u8B58\u5225\u8CC7\u6599", url: "https://www.sec.gov/edgar/search/#/q=" + encodeURIComponent(company.full_name), fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), notice: "\u7F8E\u80A1\u516C\u53F8\u7533\u5831\u53EF\u5728\u4E0B\u65B9 SEC \u516C\u544A\u67E5\u770B\uFF1B\u6B64\u8655\u672A\u63D0\u4F9B\u8CA1\u52D9\u6BD4\u7387\u3002" } });
+  if (path === "/us-filings") {
+    try {
+      return reply({ company, filings: await fetchUSFilings(company, env, fetcher) });
+    } catch (e) {
+      return reply({ company, filings: [], warning: e.message });
+    }
+  }
+  if (path === "/intraday") return reply({ error: "\u7F8E\u80A1\u7B2C\u4E00\u7248\u63D0\u4F9B\u6536\u76E4\u65E5\uFF0F\u9031\uFF0F\u6708 K\uFF0C\u5C1A\u672A\u63A5\u5165\u76E4\u4E2D\u884C\u60C5\u3002" }, 422);
+  if (path === "/chart-prices" || path === "/prices") {
+    if (!["GET", "POST"].includes(req.method)) return reply({ error: "Method not allowed" }, 405);
+    if (path === "/prices" && !await sql("SELECT 1 FROM watchlists WHERE user_id=? AND company_code=?", user.id, code).first()) return reply({ error: "\u8ACB\u5148\u8FFD\u8E64\u516C\u53F8" }, 403);
+    const prices = await readUSPrices(sql, code), last = prices.at(-1), at = last?.updated_at || 0, refresh = req.method === "POST" || !prices.length || Date.now() - at > 864e5 || last?.date < completedMarketDay(/* @__PURE__ */ new Date(), "US") && Date.now() - at > 36e5;
+    if (!refresh) return reply({ prices, source: last?.source, currency: "USD", timezone: "America/New_York", updatedAt: at, refreshed: false });
+    try {
+      const result = await fetchUSPrices(code, fetcher);
+      await saveUSPrices(sql, env.DB, result.rows, result.source);
+      return reply({ prices: await readUSPrices(sql, code), source: result.source, currency: "USD", timezone: "America/New_York", updatedAt: Date.now(), refreshed: true });
+    } catch (e) {
+      return prices.length ? reply({ prices, currency: "USD", timezone: "America/New_York", refreshed: false, warning: e.message }) : reply({ error: e.message }, 502);
+    }
+  }
+  if (path === "/preview") {
+    if (req.method !== "GET") return reply({ error: "Method not allowed" }, 405);
+    if (url.searchParams.get("stored") === "1") return reply({ company, news: (await sql("SELECT * FROM news WHERE company_code=? AND published_at>=? ORDER BY published_at DESC,id DESC", code, new Date(Date.now() - 32 * 864e5).toISOString()).all()).results });
+    const feed = new URL("https://news.google.com/rss/search");
+    feed.search = new URLSearchParams({ q: newsQuery(company), hl: "en-US", gl: "US", ceid: "US:en" }).toString();
+    try {
+      const response = await fetcher(feed, { signal: AbortSignal.timeout(2e4) });
+      if (!response.ok) throw Error("Google News RSS HTTP " + response.status);
+      return reply({ company, news: parsePreview2(await response.text(), company), timezone: "America/New_York" });
+    } catch (e) {
+      await recordNewsAttempt(sql, { code, stage: "preview", status: "failed", details: { error: e.message } });
+      return reply({ error: "\u7F8E\u80A1\u65B0\u805E\u4F86\u6E90\u66AB\u6642\u7121\u6CD5\u8B80\u53D6\uFF1A" + e.message, code: "NEWS_SOURCE_UNAVAILABLE" }, 502);
+    }
+  }
+  return null;
 }
 
 // worker/d1-usage.js
@@ -122,13 +655,16 @@ async function stockEventCacheRoute(req, { sql, reply, user, randomToken: random
 
 // shared/stock-movements.js
 var shiftDay = (day, n) => new Date(Date.parse(day + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
-function completedDay(now = /* @__PURE__ */ new Date()) {
+function completedDay(now = /* @__PURE__ */ new Date(), market = "TW") {
+  if (market === "US") return completedMarketDay(now, market);
   const taiwan = new Date(now.getTime() + 8 * 36e5), day = taiwan.toISOString().slice(0, 10);
   return taiwan.getUTCHours() * 60 + taiwan.getUTCMinutes() < 810 ? shiftDay(day, -1) : day;
 }
 function detectMovement(prices, { code, date = completedDay(), three = 8, five = 12 } = {}) {
+  const us = isUS(code), original = prices.filter((p) => (!code || p.code === code) && p.date <= date), adjusted = us && original.length > 0 && original.every((p) => Number.isFinite(p.adjusted_close) && p.adjusted_close > 0);
+  if (adjusted) prices = prices.map((p) => p.code === code ? { ...p, close: p.adjusted_close } : p);
   const bars = prices.filter((p) => (!code || p.code === code) && p.date <= date).sort((a, b) => a.date.localeCompare(b.date));
-  const benchmark = prices.filter((p) => p.code === "TAIEX" && p.date <= date).sort((a, b) => a.date.localeCompare(b.date)), market = new Map(benchmark.map((p) => [p.date, p]));
+  const benchmark = prices.filter((p) => p.code === (us ? "US:SPY" : "TAIEX") && p.date <= date).sort((a, b) => a.date.localeCompare(b.date)), market = new Map(benchmark.map((p) => [p.date, p]));
   const last = bars.at(-1), missing = () => ({ triggered: false, requestedDate: date, date: last?.date || null, windows: [], reason: "\u6536\u76E4\u884C\u60C5\u4E0D\u8DB3\uFF0C\u8ACB\u66F4\u65B0\u8CC7\u6599" });
   if (!last) return missing();
   const windows = [3, 5].map((days) => {
@@ -143,7 +679,7 @@ function detectMovement(prices, { code, date = completedDay(), three = 8, five =
     return { days, threshold, from: start.date, baseline: base.date, to: last.date, change, marketChange, excess: marketChange === null ? null : change - marketChange, volumeRatio, adjustmentRisk, triggered: Math.abs(change) + 1e-9 >= threshold };
   });
   const triggered = windows.filter((w) => w.triggered);
-  return { code: code || last.code, date: last.date, requestedDate: date, stale: benchmark.at(-1)?.date > last.date, windows, triggered: !!triggered.length, from: triggered.length ? triggered.map((w) => w.from).sort()[0] : windows.find((w) => w.from)?.from, adjustmentRisk: triggered.some((w) => w.adjustmentRisk), priceWarning: "\u672A\u9084\u539F\u80A1\u50F9\uFF1B\u9664\u6B0A\u606F\u3001\u6E1B\u8CC7\u8207\u5206\u5272\u53EF\u80FD\u5F71\u97FF\u6578\u503C\uFF0C\u4E8B\u4EF6\u95DC\u806F\u50C5\u4F9B\u6838\u5C0D\u3002" };
+  return { code: code || last.code, date: last.date, requestedDate: date, stale: benchmark.at(-1)?.date > last.date, windows, triggered: !!triggered.length, from: triggered.length ? triggered.map((w) => w.from).sort()[0] : windows.find((w) => w.from)?.from, adjustmentRisk: triggered.some((w) => w.adjustmentRisk), market: us ? "US" : "TW", benchmark: us ? "SPY" : "\u52A0\u6B0A\u6307\u6578", adjusted, priceWarning: adjusted ? "\u7570\u52D5\u5831\u916C\u4F7F\u7528\u4F86\u6E90\u8ABF\u6574\u5F8C\u6536\u76E4\u50F9\uFF1BK \u7DDA\u986F\u793A\u539F\u59CB OHLC\uFF0C\u4E8B\u4EF6\u95DC\u806F\u50C5\u4F9B\u6838\u5C0D\u3002" : "\u672A\u9084\u539F\u80A1\u50F9\uFF1B\u9664\u6B0A\u606F\u3001\u6E1B\u8CC7\u8207\u5206\u5272\u53EF\u80FD\u5F71\u97FF\u6578\u503C\uFF0C\u4E8B\u4EF6\u95DC\u806F\u50C5\u4F9B\u6838\u5C0D\u3002" };
 }
 function newsWindow(movement, lookback = 45) {
   if (!movement.from || !movement.date) throw Error("\u6C92\u6709\u5B8C\u6574\u7570\u52D5\u5340\u9593");
@@ -151,14 +687,20 @@ function newsWindow(movement, lookback = 45) {
 }
 
 // worker/stock-events.js
-async function stockEventsRoute(req, { sql, reply, user, parsePreview: parsePreview2, curateNews: curateNews2, companyMention: companyMention2, fetcher = fetch }) {
+async function stockEventsRoute(req, { sql, reply, user, parsePreview: parsePreview2, curateNews: curateNews2, companyMention: companyMention2, fetcher = fetch, env = {} }) {
   const url = new URL(req.url);
   if (!["/stock-movements", "/stock-event-news"].includes(url.pathname)) return null;
   if (!user?.id) return reply({ error: "\u8ACB\u5148\u767B\u5165" }, 401);
   if (!["GET", "POST"].includes(req.method)) return reply({ error: "Method not allowed" }, 405);
-  const date = url.searchParams.get("date") || completedDay(), cutoff = completedDay();
+  const requested = url.searchParams.get("code") || url.searchParams.get("codes")?.split(",")[0], market = marketOf(requested);
+  const date = url.searchParams.get("date") || completedDay(/* @__PURE__ */ new Date(), market), cutoff = completedDay(/* @__PURE__ */ new Date(), market);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || date > cutoff) return reply({ error: "\u8ACB\u9078\u64C7\u5DF2\u6536\u76E4\u7684\u65E5\u671F" }, 400);
   const readPrices = async (codes) => {
+    if (codes.some(isUS)) {
+      const rows2 = [];
+      for (const code2 of codes) rows2.push(...await readUSPrices(sql, code2));
+      return rows2;
+    }
     try {
       const rows2 = [];
       for (let at = 0; at < codes.length; at += 90) {
@@ -173,13 +715,13 @@ async function stockEventsRoute(req, { sql, reply, user, parsePreview: parsePrev
   };
   if (url.pathname === "/stock-movements") {
     const codes = [...new Set((url.searchParams.get("codes") || "").split(",").filter(Boolean))];
-    if (!codes.length || codes.length > 100 || codes.some((c) => !/^\d{4,6}$/.test(c))) return reply({ error: "Invalid stock codes" }, 400);
+    if (!codes.length || codes.length > 100 || codes.some((c) => !validStockCode(c) || marketOf(c) !== market)) return reply({ error: "Invalid stock codes" }, 400);
     const prices = await readPrices(codes);
     return reply({ owner_id: user.id, date, movements: codes.map((code2) => detectMovement(prices, { code: code2, date })) });
   }
   const code = url.searchParams.get("code"), lookback = Number(url.searchParams.get("lookback") || 45);
-  if (!/^\d{4,6}$/.test(code || "") || ![30, 45].includes(lookback)) return reply({ error: "Invalid event range" }, 400);
-  const company = await sql("SELECT * FROM companies WHERE code=?", code).first();
+  if (!validStockCode(code) || ![30, 45].includes(lookback)) return reply({ error: "Invalid event range" }, 400);
+  const company = enrichCompany(await sql("SELECT * FROM companies WHERE code=?", code).first());
   if (!company) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
   const movement = detectMovement(await readPrices([code]), { code, date });
   if (!movement.from) return reply({ error: "\u884C\u60C5\u4E0D\u8DB3\uFF0C\u8ACB\u5148\u5728\u500B\u80A1\u8D70\u52E2\u66F4\u65B0\u65E5\u7DDA" }, 422);
@@ -190,16 +732,22 @@ async function stockEventsRoute(req, { sql, reply, user, parsePreview: parsePrev
   for (let i = 0; i < chunks.length; i += 3) await Promise.all(chunks.slice(i, i + 3).map(async (chunk) => {
     try {
       const feed = new URL("https://news.google.com/rss/search");
-      feed.search = new URLSearchParams({ q: `("${company.name}" OR "${company.full_name || company.name}" OR "${code}") (site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) after:${shiftDay(chunk.from, -1)} before:${shiftDay(chunk.to, 1)}`, hl: "zh-TW", gl: "TW", ceid: "TW:zh-Hant" }).toString();
+      feed.search = new URLSearchParams({ q: newsQuery(company, `after:${shiftDay(chunk.from, -1)} before:${shiftDay(chunk.to, 1)}`), hl: market === "US" ? "en-US" : "zh-TW", gl: market === "US" ? "US" : "TW", ceid: market === "US" ? "US:en" : "TW:zh-Hant" }).toString();
       const response = await fetcher(feed, { signal: AbortSignal.timeout(12e3) });
       if (!response.ok) throw Error("RSS " + response.status);
-      rows.push(...parsePreview2(await response.text(), company, /* @__PURE__ */ new Date(chunk.to + "T15:59:59.999Z"), conflicts, /* @__PURE__ */ new Date(chunk.from + "T00:00:00+08:00")));
+      rows.push(...parsePreview2(await response.text(), company, /* @__PURE__ */ new Date(shiftDay(chunk.to, 1) + (market === "US" ? "T05:00:00Z" : "T00:00:00+08:00")), conflicts, /* @__PURE__ */ new Date(chunk.from + (market === "US" ? "T00:00:00Z" : "T00:00:00+08:00"))));
     } catch (e) {
       failures.push(`${chunk.from}\uFF5E${chunk.to}\uFF1A${e.message}`);
     }
   }));
-  const news = curateNews2(rows.filter((r) => r.news_date >= range.from && r.news_date <= range.to && companyMention2(r.title, company, conflicts))).sort((a, b) => String(a.published_at).localeCompare(String(b.published_at)));
-  return reply({ owner_id: user.id, company, movement, news, coverage: { ...range, lookback, searchSegments: chunks.length, failedSegments: failures.length, failures, count: news.length, first: news[0]?.news_date || null, last: news.at(-1)?.news_date || null, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), complete: false, note: "\u5DF2\u4F9D\u65E5\u671F\u5340\u9593\u67E5\u8A62\uFF1B\u641C\u5C0B\u4F86\u6E90\u4E0D\u4FDD\u8B49\u5B8C\u6574\u6536\u9304\uFF0C\u6C92\u6709\u56DE\u50B3\u65B0\u805E\u4E0D\u4EE3\u8868\u7576\u5929\u6C92\u6709\u4E8B\u4EF6\u3002" } });
+  let filings = [];
+  if (market === "US") try {
+    filings = (await fetchUSFilings(company, env, fetcher)).filter((r) => r.news_date >= range.from && r.news_date <= range.to);
+  } catch (e) {
+    failures.push("SEC \u516C\u544A\uFF1A" + e.message);
+  }
+  const news = [...curateNews2(rows.filter((r) => r.news_date >= range.from && r.news_date <= range.to && companyMention2(r.title, company, conflicts))), ...filings].sort((a, b) => String(a.published_at).localeCompare(String(b.published_at)));
+  return reply({ owner_id: user.id, company, movement, news, coverage: { ...range, lookback, searchSegments: chunks.length, failedSegments: failures.length, failures, count: news.length, first: news[0]?.news_date || null, last: news.at(-1)?.news_date || null, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), market, timezone: market === "US" ? "America/New_York" : "Asia/Taipei", complete: false, note: "\u5DF2\u4F9D\u65E5\u671F\u5340\u9593\u67E5\u8A62\uFF1B\u641C\u5C0B\u4F86\u6E90\u4E0D\u4FDD\u8B49\u5B8C\u6574\u6536\u9304\uFF0C\u6C92\u6709\u56DE\u50B3\u65B0\u805E\u4E0D\u4EE3\u8868\u7576\u5929\u6C92\u6709\u4E8B\u4EF6\u3002" } });
 }
 
 // worker/account-results.js
@@ -213,7 +761,10 @@ async function accountResultsRoute(req, { sql, reply, user, db }) {
   if (!user?.id) return reply({ error: "\u8ACB\u5148\u767B\u5165" }, 401);
   if (url.pathname === "/account-news") {
     await sql("CREATE TABLE IF NOT EXISTS account_news(user_id TEXT NOT NULL,url TEXT NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(user_id,url))").run();
-    if (req.method === "GET") return reply({ news: (await sql("SELECT payload FROM account_news WHERE user_id=? LIMIT 2000", user.id).all()).results.map((r) => JSON.parse(r.payload)) });
+    if (req.method === "GET") {
+      const rows2 = (await sql("SELECT payload FROM account_news WHERE user_id=? ORDER BY rowid LIMIT 2000", user.id).all()).results.map((r) => JSON.parse(r.payload));
+      return reply({ news: [...new Map(rows2.map((r) => [r.company_code + "|" + r.url, r])).values()] });
+    }
     if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
     const raw2 = await req.text();
     if (new TextEncoder().encode(raw2).length > 5e5) return reply({ error: "\u65B0\u805E\u540C\u6B65\u8CC7\u6599\u904E\u5927" }, 413);
@@ -224,8 +775,8 @@ async function accountResultsRoute(req, { sql, reply, user, db }) {
       return reply({ error: "Invalid JSON" }, 400);
     }
     const keys = ["company_code", "title", "url", "source", "published_at", "news_date"];
-    if (!Array.isArray(rows) || rows.length > 100 || rows.some((r) => !r || Object.keys(r).some((k) => !keys.includes(k)) || keys.some((k) => typeof r[k] !== "string") || !/^https?:\/\//.test(r.url) || !/^\d{4,6}$/.test(r.company_code))) return reply({ error: "Invalid news" }, 400);
-    for (const row2 of rows) await sql("INSERT INTO account_news(user_id,url,payload) VALUES(?,?,?) ON CONFLICT(user_id,url) DO UPDATE SET payload=excluded.payload WHERE account_news.payload<>excluded.payload", user.id, row2.url, JSON.stringify(row2)).run();
+    if (!Array.isArray(rows) || rows.length > 100 || rows.some((r) => !r || Object.keys(r).some((k) => !keys.includes(k)) || keys.some((k) => typeof r[k] !== "string") || !/^https?:\/\//.test(r.url) || !validStockCode(r.company_code))) return reply({ error: "Invalid news" }, 400);
+    for (const row2 of rows) await sql("INSERT INTO account_news(user_id,url,payload) VALUES(?,?,?) ON CONFLICT(user_id,url) DO UPDATE SET payload=excluded.payload WHERE account_news.payload<>excluded.payload", user.id, row2.company_code + "|" + row2.url, JSON.stringify(row2)).run();
     return reply({ ok: true });
   }
   if (!["GET", "POST", "DELETE"].includes(req.method)) return reply({ error: "Method not allowed" }, 405);
@@ -756,57 +1307,6 @@ function parseCompanyProfile(html, code) {
   if (!metrics.length && !introduction) throw Error("\u8CA1\u5831\u72D7\u516C\u958B\u9801\u9762\u672A\u63D0\u4F9B\u53EF\u8B80\u53D6\u7684\u516C\u53F8\u6216\u8CA1\u52D9\u8CC7\u6599");
   return { code, heading, introduction, metrics: metrics.slice(0, 8), source: "\u8CA1\u5831\u72D7", url: "https://statementdog.com/analysis/" + code, fetchedAt: (/* @__PURE__ */ new Date()).toISOString() };
 }
-function companyMention(title, company, conflicts = []) {
-  const text = String(title || "").normalize("NFKC");
-  if (new RegExp("(?<!\\d)" + company.code + "(?!\\d)").test(text)) return true;
-  let cleaned = text;
-  const names = [...conflicts, ...company.code === "2303" ? ["\u53F0\u806F\u96FB"] : []];
-  for (const name of [...new Set(names)].sort((a, b) => b.length - a.length)) if (name && name !== company.name) cleaned = cleaned.split(name).join(" ");
-  return [company.name, company.full_name].filter((n) => n && n.length >= 2).some((n) => cleaned.includes(n));
-}
-function trustedSource(source) {
-  const key = String(source || "").normalize("NFKC").replace(/\s/g, "").toLowerCase();
-  return { "\u4E2D\u592E\u793E": "\u4E2D\u592E\u793E", "\u4E2D\u592E\u793Ecna": "\u4E2D\u592E\u793E", "cna": "\u4E2D\u592E\u793E", "moneydj": "MoneyDJ", "moneydj\u7406\u8CA1\u7DB2": "MoneyDJ", "\u9245\u4EA8\u7DB2": "\u9245\u4EA8\u7DB2", "\u9245\u4EA8": "\u9245\u4EA8\u7DB2", "anue\u9245\u4EA8": "\u9245\u4EA8\u7DB2", "anue\u9245\u4EA8\u7DB2": "\u9245\u4EA8\u7DB2" }[key] || null;
-}
-function sourceDomain(value) {
-  try {
-    const h = new URL(value).hostname.toLowerCase();
-    return { "www.cna.com.tw": "\u4E2D\u592E\u793E", "cna.com.tw": "\u4E2D\u592E\u793E", "www.moneydj.com": "MoneyDJ", "moneydj.com": "MoneyDJ", "news.cnyes.com": "\u9245\u4EA8\u7DB2" }[h] || null;
-  } catch {
-    return null;
-  }
-}
-var normalizedTitle = (n) => String(n.title || "").replace(/\s*[-–—|]\s*(中央社(?: CNA)?|MoneyDJ(?:理財網)?|(?:Anue)?鉅亨(?:網)?)\s*$/i, "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-function duplicateNews(a, b) {
-  if (a.company_code !== b.company_code) return false;
-  if (a.url === b.url) return true;
-  if (Math.abs(Date.parse(a.published_at) - Date.parse(b.published_at)) > 48 * 36e5) return false;
-  const x = normalizedTitle(a), y = normalizedTitle(b);
-  if (!x || !y) return false;
-  const nums = (n) => (String(n.title || "").normalize("NFKC").match(/\d+(?:[.,]\d+)*/g) || []).sort().join("|");
-  if (nums(a) !== nums(b)) return false;
-  if (x === y) return true;
-  if (Math.min(x.length, y.length) < 12) return false;
-  const grams = (s) => new Set(Array.from({ length: s.length - 1 }, (_, i) => s.slice(i, i + 2)));
-  const gx = grams(x), gy = grams(y);
-  const common = [...gx].filter((g) => gy.has(g)).length;
-  return 2 * common / (gx.size + gy.size) >= 0.9;
-}
-function isGeneratedAnswer(value) {
-  try {
-    const u = new URL(value);
-    return ["news.cnyes.com", "gfe-desktop.cnyes.com"].includes(u.hostname) && u.pathname.startsWith("/news/aigc/");
-  } catch {
-    return false;
-  }
-}
-function curateNews(rows) {
-  const rank = { "\u4E2D\u592E\u793E": 0, "MoneyDJ": 1, "\u9245\u4EA8\u7DB2": 2 };
-  const candidates = rows.filter((n) => trustedSource(n.source) && !isGeneratedAnswer(n.article_url || n.url)).map((n) => ({ ...n, source: trustedSource(n.source) })).sort((a, b) => Number(!!b.article_summary) - Number(!!a.article_summary) || rank[a.source] - rank[b.source] || String(b.published_at).localeCompare(String(a.published_at)));
-  const kept = [];
-  for (const n of candidates) if (!kept.some((k) => duplicateNews(k, n))) kept.push(n);
-  return kept.sort((a, b) => String(b.published_at).localeCompare(String(a.published_at)));
-}
 function xmlText(value) {
   return String(value || "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (_, entity) => {
     const named = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
@@ -837,11 +1337,11 @@ function parsePreview(xml, company, now = /* @__PURE__ */ new Date(), conflicts 
     } catch {
       continue;
     }
-    rows.set(link, { company_code: company.code, title, url: link, source, published_at: published.toISOString(), news_date: new Date(published.getTime() + 8 * 36e5).toISOString().slice(0, 10), preview: true });
+    rows.set(link, { company_code: company.code, title, url: link, source, published_at: published.toISOString(), news_date: marketDay(published, isUS(company.code) ? "US" : "TW"), preview: true });
   }
   return curateNews([...rows.values()]);
 }
-var ARTICLE_HOSTS = /* @__PURE__ */ new Set(["www.cna.com.tw", "cna.com.tw", "www.moneydj.com", "moneydj.com", "m.moneydj.com", "news.cnyes.com", "gfe-desktop.cnyes.com"]);
+var ARTICLE_HOSTS = /* @__PURE__ */ new Set(["www.cna.com.tw", "cna.com.tw", "www.moneydj.com", "moneydj.com", "m.moneydj.com", "news.cnyes.com", "gfe-desktop.cnyes.com", "www.reuters.com", "reuters.com", "www.cnbc.com", "cnbc.com", "finance.yahoo.com", "www.marketwatch.com", "marketwatch.com"]);
 function normalizeArticleURL(value) {
   let u = new URL(value);
   if (["www.google.com", "google.com"].includes(u.hostname) && u.pathname === "/url") {
@@ -858,7 +1358,7 @@ function normalizeArticleURL(value) {
 }
 function checkedArticleURL(value) {
   const u = new URL(value);
-  if (u.protocol !== "https:" || u.username || u.password || u.port && u.port !== "443" || !ARTICLE_HOSTS.has(u.hostname) && u.hostname !== "news.google.com") throw Error("\u4F86\u6E90\u7DB2\u5740\u672A\u652F\u63F4\uFF08" + u.hostname + "\uFF09\uFF1B\u53EA\u63A5\u53D7\u4E09\u5BB6\u65B0\u805E\u4F86\u6E90\u53CA Google News \u539F\u6587\u9023\u7D50");
+  if (u.protocol !== "https:" || u.username || u.password || u.port && u.port !== "443" || !ARTICLE_HOSTS.has(u.hostname) && u.hostname !== "news.google.com") throw Error("\u4F86\u6E90\u7DB2\u5740\u672A\u652F\u63F4\uFF08" + u.hostname + "\uFF09\uFF1B\u53EA\u63A5\u53D7\u652F\u63F4\u7684\u53F0\u7F8E\u80A1\u65B0\u805E\u4F86\u6E90\u53CA Google News \u539F\u6587\u9023\u7D50");
   return u.href;
 }
 function extractArticleBody(html) {
@@ -1216,6 +1716,12 @@ var index_default = { async fetch(req, env) {
         await sql("DELETE FROM rankings WHERE date NOT IN (SELECT date FROM rankings ORDER BY date DESC LIMIT 60)").run();
         return reply({ ok: true });
       }
+      if (path === "/admin/us-prices" && req.method === "POST") {
+        const { prices } = await req.json();
+        if (!Array.isArray(prices) || prices.length > 20 || prices.some((p) => !isUS(p.code) || !/^\d{4}-\d{2}-\d{2}$/.test(p.date) || p.date > marketDay(/* @__PURE__ */ new Date(), "US") || ![p.open, p.high, p.low, p.close].every((v) => Number.isFinite(v) && v > 0) || p.low > Math.min(p.open, p.close) || p.high < Math.max(p.open, p.close) || p.volume != null && (!Number.isFinite(p.volume) || p.volume < 0) || p.adjusted_close != null && (!Number.isFinite(p.adjusted_close) || p.adjusted_close <= 0))) return reply({ error: "Invalid US prices" }, 400);
+        await saveUSPrices(sql, env.DB, prices);
+        return reply({ ok: true });
+      }
       if (path === "/admin/prices" && req.method === "POST") {
         const { prices } = await req.json();
         if (!Array.isArray(prices) || prices.length > 20 || prices.some((p) => !/^(\d{4,6}|TAIEX)$/.test(p.code) || !/^\d{4}-\d{2}-\d{2}$/.test(p.date) || !Number.isFinite(p.close) || p.close <= 0)) return reply({ error: "Invalid prices" }, 400);
@@ -1227,7 +1733,7 @@ var index_default = { async fetch(req, env) {
         const { companies } = await req.json();
         if (!Array.isArray(companies) || companies.length > 100) return reply({ error: "Invalid batch" }, 400);
         await env.DB.batch(companies.map((c) => {
-          if (!/^\d{4,6}$/.test(c.code) || !c.name || !["\u4E0A\u5E02", "\u4E0A\u6AC3"].includes(c.market)) throw Error("Invalid company");
+          if (!validStockCode(c.code) || !c.name || !(isUS(c.code) ? c.market === "\u7F8E\u80A1" : ["\u4E0A\u5E02", "\u4E0A\u6AC3"].includes(c.market))) throw Error("Invalid company");
           return sql("INSERT INTO companies(code,name,full_name,market) VALUES(?,?,?,?) ON CONFLICT(code) DO UPDATE SET name=excluded.name,full_name=excluded.full_name,market=excluded.market WHERE companies.name IS NOT excluded.name OR companies.full_name IS NOT excluded.full_name OR companies.market IS NOT excluded.market", c.code, c.name, c.full_name, c.market);
         }));
         return reply({ ok: true });
@@ -1243,7 +1749,7 @@ var index_default = { async fetch(req, env) {
       }
       if (path === "/admin/news-attempts" && req.method === "POST") {
         const b = await req.json();
-        if (!/^\d{4,6}$/.test(b.code || "") || !["success", "empty", "failed"].includes(b.status) || !await sql("SELECT code FROM companies WHERE code=?", b.code).first()) return reply({ error: "Invalid attempt" }, 400);
+        if (!validStockCode(b.code) || !["success", "empty", "failed"].includes(b.status) || !await sql("SELECT code FROM companies WHERE code=?", b.code).first()) return reply({ error: "Invalid attempt" }, 400);
         await recordNewsAttempt(sql, { code: b.code, jobId: b.job_id || null, stage: "collector", status: b.status, details: b.details });
         return reply({ ok: true });
       }
@@ -1264,14 +1770,14 @@ var index_default = { async fetch(req, env) {
         const candidates = curateNews(b.news), stored = [];
         for (const code of [...new Set(candidates.map((n) => n.company_code))]) {
           const dates = candidates.filter((n) => n.company_code === code).map((n) => n.news_date).sort();
-          if (!/^\d{4,6}$/.test(code) || dates.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d))) return reply({ error: "Invalid news" }, 400);
+          if (!validStockCode(code) || dates.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d))) return reply({ error: "Invalid news" }, 400);
           const from = new Date(Date.parse(dates[0]) - 2 * 864e5).toISOString().slice(0, 10), to = new Date(Date.parse(dates.at(-1)) + 2 * 864e5).toISOString().slice(0, 10);
           stored.push(...(await sql("SELECT * FROM news WHERE news_date BETWEEN ? AND ? AND company_code=?", from, to, code).all()).results);
         }
         const accepted = [];
         for (const n of candidates) if (!stored.some((k) => trustedSource(k.source) && k.url !== n.url && duplicateNews(k, n))) accepted.push(n);
         if (accepted.length) await env.DB.batch(accepted.map((n) => {
-          if (!/^\d{4,6}$/.test(n.company_code) || !/^https:\/\//.test(n.url) || !/^\d{4}-\d{2}-\d{2}$/.test(n.news_date)) throw Error("Invalid news");
+          if (!validStockCode(n.company_code) || !/^https:\/\//.test(n.url) || !/^\d{4}-\d{2}-\d{2}$/.test(n.news_date)) throw Error("Invalid news");
           return sql("INSERT INTO news(company_code,title,url,source,published_at,news_date) VALUES(?,?,?,?,?,?) ON CONFLICT(company_code,url) DO UPDATE SET title=excluded.title,source=excluded.source,published_at=excluded.published_at,news_date=excluded.news_date WHERE news.title IS NOT excluded.title OR news.source IS NOT excluded.source OR news.published_at IS NOT excluded.published_at OR news.news_date IS NOT excluded.news_date", n.company_code, n.title, n.url, n.source, n.published_at, n.news_date);
         }));
         return reply({ ok: true });
@@ -1342,7 +1848,9 @@ var index_default = { async fetch(req, env) {
     if (rankingUpdate) return rankingUpdate;
     const eventCache = await stockEventCacheRoute(req, { sql, reply, user, randomToken });
     if (eventCache) return eventCache;
-    const stockEvents = await stockEventsRoute(req, { sql, reply, user, parsePreview, curateNews, companyMention });
+    const usMarket = await usMarketRoute(req, env, { sql, reply, user, parsePreview });
+    if (usMarket) return usMarket;
+    const stockEvents = await stockEventsRoute(req, { sql, reply, user, parsePreview, curateNews, companyMention, env });
     if (stockEvents) return stockEvents;
     const accountResults = await accountResultsRoute(req, { sql, reply, user, db: env.DB });
     if (accountResults) return accountResults;
@@ -1539,7 +2047,7 @@ var index_default = { async fetch(req, env) {
     if (path === "/companies") {
       const q = (url.searchParams.get("q") || "").trim().slice(0, 60);
       if (!q) return reply({ companies: [] });
-      const companies = await sql("SELECT * FROM companies WHERE code=? OR instr(code,?)>0 OR instr(name,?)>0 OR instr(full_name,?)>0 ORDER BY CASE WHEN code=? THEN 0 WHEN code LIKE ? THEN 1 WHEN name=? THEN 2 WHEN name LIKE ? THEN 3 WHEN full_name LIKE ? THEN 4 ELSE 5 END,code LIMIT 20", q, q, q, q, q, q + "%", q, q + "%", q + "%").all();
+      const companies = await sql("SELECT * FROM companies WHERE (code=? OR instr(code,?)>0 OR instr(name,?)>0 OR instr(full_name,?)>0) AND code NOT LIKE 'US:%' ORDER BY CASE WHEN code=? THEN 0 WHEN code LIKE ? THEN 1 WHEN name=? THEN 2 WHEN name LIKE ? THEN 3 WHEN full_name LIKE ? THEN 4 ELSE 5 END,code LIMIT 20", q, q, q, q, q, q + "%", q, q + "%", q + "%").all();
       return reply({ companies: companies.results });
     }
     if (path === "/preview" && req.method === "GET") {
@@ -1570,13 +2078,13 @@ var index_default = { async fetch(req, env) {
     }
     if (path === "/news-update-history") {
       const code = url.searchParams.get("code");
-      if (!/^\d{4,6}$/.test(code || "")) return reply({ error: "Invalid code" }, 400);
+      if (!validStockCode(code)) return reply({ error: "Invalid code" }, 400);
       return reply({ attempts: await newsAttempts(sql, { code }) });
     }
     if (path === "/watchlists" && req.method === "GET") {
       const companies = (await sql("SELECT c.*, (SELECT COUNT(*) FROM news n WHERE n.company_code=c.code) AS news_count FROM companies c JOIN watchlists w ON c.code=w.company_code WHERE w.user_id=? ORDER BY w.created_at,c.code", user.id).all()).results;
       const catalog = (await sql("SELECT code,name FROM companies").all()).results;
-      return reply({ companies: companies.map((c) => ({ ...c, conflicting_names: catalog.filter((other) => other.code !== c.code && other.name !== c.name && other.name.includes(c.name)).map((other) => other.name) })) });
+      return reply({ companies: companies.map((c) => ({ ...enrichCompany(c), conflicting_names: catalog.filter((other) => other.code !== c.code && other.name !== c.name && other.name.includes(c.name)).map((other) => other.name) })) });
     }
     if (path === "/watchlists" && req.method === "POST") {
       const { code } = await req.json();
@@ -1606,7 +2114,7 @@ var index_default = { async fetch(req, env) {
         code = news.company_code;
       }
       if (path === "/device-collect") {
-        if (!/^\d{4,6}$/.test(code || "") || !await sql("SELECT code FROM companies WHERE code=?", code).first()) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
+        if (!validStockCode(code) || !await sql("SELECT code FROM companies WHERE code=?", code).first()) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
       } else if (!await sql("SELECT 1 FROM watchlists WHERE user_id=? AND company_code=?", user.id, code).first()) return reply({ error: "\u5C1A\u672A\u8FFD\u8E64\u6B64\u516C\u53F8" }, 403);
       const retryAI = b.retry_ai === true && news?.summary_method !== "ai";
       if (news?.article_summary && !retryAI) return reply({ news });

@@ -1,0 +1,301 @@
+[
+  {
+    "code": "US:NVDA",
+    "symbol": "NVDA",
+    "name": "輝達",
+    "full_name": "NVIDIA",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "輝達",
+      "NVIDIA",
+      "英偉達"
+    ]
+  },
+  {
+    "code": "US:AAPL",
+    "symbol": "AAPL",
+    "name": "蘋果",
+    "full_name": "Apple",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "蘋果",
+      "Apple"
+    ]
+  },
+  {
+    "code": "US:MSFT",
+    "symbol": "MSFT",
+    "name": "微軟",
+    "full_name": "Microsoft",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "微軟",
+      "Microsoft"
+    ]
+  },
+  {
+    "code": "US:AMZN",
+    "symbol": "AMZN",
+    "name": "亞馬遜",
+    "full_name": "Amazon",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "亞馬遜",
+      "Amazon"
+    ]
+  },
+  {
+    "code": "US:GOOGL",
+    "symbol": "GOOGL",
+    "name": "Alphabet",
+    "full_name": "Google",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "Alphabet",
+      "Google",
+      "谷歌"
+    ]
+  },
+  {
+    "code": "US:META",
+    "symbol": "META",
+    "name": "Meta",
+    "full_name": "Facebook",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "Meta",
+      "Facebook",
+      "臉書"
+    ]
+  },
+  {
+    "code": "US:TSLA",
+    "symbol": "TSLA",
+    "name": "特斯拉",
+    "full_name": "Tesla",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "特斯拉",
+      "Tesla"
+    ]
+  },
+  {
+    "code": "US:AMD",
+    "symbol": "AMD",
+    "name": "超微",
+    "full_name": "Advanced Micro Devices",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "超微",
+      "Advanced Micro Devices"
+    ]
+  },
+  {
+    "code": "US:AVGO",
+    "symbol": "AVGO",
+    "name": "博通",
+    "full_name": "Broadcom",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "博通",
+      "Broadcom"
+    ]
+  },
+  {
+    "code": "US:TSM",
+    "symbol": "TSM",
+    "name": "台積電 ADR",
+    "full_name": "Taiwan Semiconductor Manufacturing",
+    "market": "美股",
+    "exchange": "NYSE",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "台積電 ADR",
+      "Taiwan Semiconductor Manufacturing",
+      "台積電",
+      "TSMC"
+    ]
+  },
+  {
+    "code": "US:MU",
+    "symbol": "MU",
+    "name": "美光",
+    "full_name": "Micron Technology",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "美光",
+      "Micron Technology"
+    ]
+  },
+  {
+    "code": "US:INTC",
+    "symbol": "INTC",
+    "name": "英特爾",
+    "full_name": "Intel",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "英特爾",
+      "Intel"
+    ]
+  },
+  {
+    "code": "US:QCOM",
+    "symbol": "QCOM",
+    "name": "高通",
+    "full_name": "Qualcomm",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "高通",
+      "Qualcomm"
+    ]
+  },
+  {
+    "code": "US:ARM",
+    "symbol": "ARM",
+    "name": "安謀",
+    "full_name": "Arm Holdings",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "安謀",
+      "Arm Holdings"
+    ]
+  },
+  {
+    "code": "US:NFLX",
+    "symbol": "NFLX",
+    "name": "Netflix",
+    "full_name": "網飛",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "Netflix",
+      "網飛"
+    ]
+  },
+  {
+    "code": "US:PLTR",
+    "symbol": "PLTR",
+    "name": "Palantir",
+    "full_name": "帕蘭提爾",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "Palantir",
+      "帕蘭提爾"
+    ]
+  },
+  {
+    "code": "US:COIN",
+    "symbol": "COIN",
+    "name": "Coinbase",
+    "full_name": "Coinbase Global",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "Coinbase",
+      "Coinbase Global"
+    ]
+  },
+  {
+    "code": "US:BRK.B",
+    "symbol": "BRK.B",
+    "name": "波克夏 B 股",
+    "full_name": "Berkshire Hathaway",
+    "market": "美股",
+    "exchange": "NYSE",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "波克夏 B 股",
+      "Berkshire Hathaway"
+    ]
+  },
+  {
+    "code": "US:JPM",
+    "symbol": "JPM",
+    "name": "摩根大通",
+    "full_name": "JPMorgan Chase",
+    "market": "美股",
+    "exchange": "NYSE",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "摩根大通",
+      "JPMorgan Chase"
+    ]
+  },
+  {
+    "code": "US:SPY",
+    "symbol": "SPY",
+    "name": "標普500 ETF",
+    "full_name": "SPDR S&P 500 ETF Trust",
+    "market": "美股",
+    "exchange": "NYSE Arca",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "標普500 ETF",
+      "SPDR S&P 500 ETF Trust"
+    ]
+  },
+  {
+    "code": "US:QQQ",
+    "symbol": "QQQ",
+    "name": "Nasdaq 100 ETF",
+    "full_name": "Invesco QQQ Trust",
+    "market": "美股",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "aliases": [
+      "Nasdaq 100 ETF",
+      "Invesco QQQ Trust"
+    ]
+  }
+]

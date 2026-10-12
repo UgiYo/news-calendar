@@ -9,3 +9,5 @@ worker/.dev.vars
 .wrangler/
 
 public/downloads/local-ai-windows.zip
+
+cloudflare-api/

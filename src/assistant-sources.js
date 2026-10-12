@@ -1,7 +1,8 @@
+import {isUS,usMention,marketLabel} from '../shared/markets.js';
 export function findAssistantCompany(question,companies,selected=''){
  const normalize=s=>String(s||'').normalize('NFKC').replaceAll('臺','台').toLowerCase();
  const q=normalize(question);
- const found=companies.filter(c=>new RegExp('(^|[^0-9])'+c.code+'([^0-9]|$)').test(q)||[c.name,c.full_name].filter(Boolean).some(n=>q.includes(normalize(n).replace(/[＊*]+$/,''))));
+ const found=companies.filter(c=>isUS(c.code)?usMention(question,c):new RegExp('(^|[^0-9])'+c.code+'([^0-9]|$)').test(q)||[c.name,c.full_name].filter(Boolean).some(n=>q.includes(normalize(n).replace(/[＊*]+$/,''))));
  return found.length?found:selected?companies.filter(c=>c.code===selected):[];
 }
 export function assistantDateRange(question){
@@ -23,7 +24,7 @@ export function assistantSources(question,{companies=[],selected='',news=[],reco
  const keywords=[...new Set((topic.match(/[a-zA-Z]{2,}|[\u4e00-\u9fff]{2,}/g)||[]).flatMap(t=>[t,...(t.length>2?[...t].slice(0,-1).map((_,i)=>t.slice(i,i+2)):[])]))];
  const relevance=c=>keywords.reduce((sum,k)=>sum+(c.title.includes(k)?4:0)+(c.text.includes(k)?1:0),0);
  const candidates=[];
- for(const n of news){if(codes.size?!codes.has(n.company_code):!(match(n.title+' '+(n.article_summary||''))||keywords.some(k=>(n.title+' '+(n.article_summary||'')).includes(k))))continue;candidates.push({kind:'新聞',title:n.title,date:n.news_date||n.published_at,url:n.article_url||n.url,text:[n.title,n.article_summary||n.summary||n.description||'僅有標題，未取得新聞全文'].join('\n')});}
+ for(const n of news){if(codes.size?!codes.has(n.company_code):!(match(n.title+' '+(n.article_summary||''))||keywords.some(k=>(n.title+' '+(n.article_summary||'')).includes(k))))continue;candidates.push({kind:'新聞',title:n.title,date:n.news_date||n.published_at,url:n.article_url||n.url,text:[marketLabel(n)+' · '+n.company_code+' · '+(isUS(n.company_code)?'美東日期':'台灣日期'),n.title,n.article_summary||n.summary||n.description||'僅有標題，未取得新聞全文'].join('\n')});}
  for(const r of records){if(r.kind!=='podcast'||!r.text&&!r.answer)continue;const text=[r.text||'',r.answer||''].join('\n');if(!match(text))continue;
  const lines=text.split('\n'),hits=lines.flatMap((line,i)=>match(line)?[...lines.slice(Math.max(0,i-1),i+2)]:[]);
  candidates.push({kind:'Podcast',title:r.title,date:r.date||r.episode?.date,url:r.episode?.url||r.episode?.audio_url||'',text:(hits.length?hits.join('\n'):text).slice(0,6000)+(r.partial?'\n注意：此集只有部分逐字稿。':'' )});

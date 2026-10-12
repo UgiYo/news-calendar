@@ -4,9 +4,9 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 function fixture(){
- const state={user:{id:'alice'},companies:[{code:'2330',name:'台積電'},{code:'2327',name:'國巨'}],selected:'',date:'2026-10-07',rankingPage:false};
+ const state={market:'TW',user:{id:'alice'},companies:[{code:'2330',name:'台積電'},{code:'2327',name:'國巨'}],selected:'',date:'2026-10-07',rankingPage:false};
  const requests=[];
- const ctx=vm.createContext({state,ranking:{stocks:[{code:'2317',name:'鴻海',amount:10}]},rankingDate:'2026-10-07',completedDay:()=> '2026-10-07',esc:String,movementSummary:()=> '3 日 +10%',Date,api:()=>{},render:()=>{},loadMovementOverview:c=>new Promise(resolve=>requests.push({c,resolve}))});
+ const ctx=vm.createContext({state,viewCompanies:()=>state.companies,ranking:{stocks:[{code:'2317',name:'鴻海',amount:10}]},rankingDate:'2026-10-07',completedDay:()=> '2026-10-07',esc:String,movementSummary:()=> '3 日 +10%',Date,api:()=>{},render:()=>{},loadMovementOverview:c=>new Promise(resolve=>requests.push({c,resolve}))});
  vm.runInContext(source.slice(source.indexOf('const movementCache=new Map();'),source.indexOf('let marketPrices=')),ctx);
  return {ctx,state,requests};
 }
@@ -19,7 +19,7 @@ test('movement query and cards contain only tracked stocks when viewing all',asy
  await pending;
  assert.match(ctx.movementOverview(),/data-movement="2330"/);
  assert.doesNotMatch(ctx.movementOverview(),/data-movement="2317"/);
- assert.match(ctx.movementOverview(),/全部追蹤公司 2 檔/);
+ assert.match(ctx.movementOverview(),/台股追蹤公司 2 檔/);
 });
 test('selected tracked company scopes results; removed or untracked selection is excluded',()=>{
  const {ctx,state}=fixture();

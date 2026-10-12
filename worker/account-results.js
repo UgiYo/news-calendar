@@ -1,3 +1,4 @@
+import {validStockCode} from '../shared/markets.js';
 import {ensureD1Index} from './d1-usage.js';
 const fields=['id','title','kind','date','updated_at','answer','text','partial','failures','transcription_model','completed_at','episode','cloud_id'];
 export function validAccountResult(row){return row&&Object.keys(row).every(k=>fields.includes(k))&&(row.cloud_id===undefined||(typeof row.cloud_id==='string'&&row.cloud_id.length<=200))&&(row.completed_at===undefined||(typeof row.completed_at==='string'&&Number.isFinite(Date.parse(row.completed_at))))&&(row.episode===undefined||(row.episode&&typeof row.episode==='object'&&!Array.isArray(row.episode)&&Object.entries(row.episode).every(([k,v])=>['id','title','date','url','audio_url','channel_id','channel_name'].includes(k)&&typeof v==='string'&&v.length<=3000)))&&typeof row.id==='string'&&row.id.length>0&&row.id.length<=500&&(row.transcription_model===undefined||typeof row.transcription_model==='string'&&row.transcription_model.length<=200)&&typeof row.title==='string'&&row.title.length<=1000&&['news','text','podcast'].includes(row.kind)&&typeof row.updated_at==='string'&&/^\d{4}-\d\d-\d\dT/.test(row.updated_at)&&Number.isFinite(Date.parse(row.updated_at))&&typeof row.answer==='string'&&typeof row.text==='string'&&typeof row.date==='string'&&typeof row.partial==='boolean'&&Array.isArray(row.failures)&&row.failures.every(v=>typeof v==='string');}
@@ -6,13 +7,13 @@ export async function accountResultsRoute(req,{sql,reply,user,db}){
  if(!user?.id)return reply({error:'請先登入'},401);
  if(url.pathname==='/account-news'){
   await sql('CREATE TABLE IF NOT EXISTS account_news(user_id TEXT NOT NULL,url TEXT NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(user_id,url))').run();
-  if(req.method==='GET')return reply({news:(await sql('SELECT payload FROM account_news WHERE user_id=? LIMIT 2000',user.id).all()).results.map(r=>JSON.parse(r.payload))});
+  if(req.method==='GET'){const rows=(await sql('SELECT payload FROM account_news WHERE user_id=? ORDER BY rowid LIMIT 2000',user.id).all()).results.map(r=>JSON.parse(r.payload));return reply({news:[...new Map(rows.map(r=>[r.company_code+'|'+r.url,r])).values()]});}
   if(req.method!=='POST')return reply({error:'Method not allowed'},405);
   const raw=await req.text();if(new TextEncoder().encode(raw).length>500000)return reply({error:'新聞同步資料過大'},413);
   let rows;try{rows=JSON.parse(raw);}catch{return reply({error:'Invalid JSON'},400);}
   const keys=['company_code','title','url','source','published_at','news_date'];
-  if(!Array.isArray(rows)||rows.length>100||rows.some(r=>!r||Object.keys(r).some(k=>!keys.includes(k))||keys.some(k=>typeof r[k]!=='string')||!/^https?:\/\//.test(r.url)||!/^\d{4,6}$/.test(r.company_code)))return reply({error:'Invalid news'},400);
-  for(const row of rows)await sql('INSERT INTO account_news(user_id,url,payload) VALUES(?,?,?) ON CONFLICT(user_id,url) DO UPDATE SET payload=excluded.payload WHERE account_news.payload<>excluded.payload',user.id,row.url,JSON.stringify(row)).run();return reply({ok:true});
+  if(!Array.isArray(rows)||rows.length>100||rows.some(r=>!r||Object.keys(r).some(k=>!keys.includes(k))||keys.some(k=>typeof r[k]!=='string')||!/^https?:\/\//.test(r.url)||!validStockCode(r.company_code)))return reply({error:'Invalid news'},400);
+  for(const row of rows)await sql('INSERT INTO account_news(user_id,url,payload) VALUES(?,?,?) ON CONFLICT(user_id,url) DO UPDATE SET payload=excluded.payload WHERE account_news.payload<>excluded.payload',user.id,row.company_code+'|'+row.url,JSON.stringify(row)).run();return reply({ok:true});
  }
  if(!['GET','POST','DELETE'].includes(req.method))return reply({error:'Method not allowed'},405);
  await sql('CREATE TABLE IF NOT EXISTS account_results(user_id TEXT NOT NULL,id TEXT NOT NULL,payload TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(user_id,id))').run();
