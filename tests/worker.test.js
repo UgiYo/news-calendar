@@ -308,3 +308,13 @@ test('generic Spotify candidates persist across cache loss and accounts and stal
  assert.equal((await call(env,'/podcasts/resolve',null,{url:show})).status,401);
  }finally{globalThis.fetch=originalFetch;globalThis.caches=originalCaches;db.close();}
 });
+test('repeated podcast imports reuse episode identity and legacy duplicates merge without deleting records',async()=>{
+ const {db,env}=setup();db.prepare('INSERT INTO users VALUES(?,?)').run('alice','alice@example.com');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(await hash('alice'),'alice',Date.now()+60000);
+ const ep=id=>({id,title:'Episode '+id,published_at:'2026-10-01T01:00:00Z',audio_url:'https://audio.example/'+id+'.mp3',url:'https://example.com/'+id});
+ const a=await (await call(env,'/podcasts/channels','alice',{id:'local',title:'Same Show',feed:'https://old.example/feed',episodes:[ep('one'),ep('two')]})).json();
+ const b=await (await call(env,'/podcasts/channels','alice',{id:'another',title:'Same Show',feed:'https://new.example/feed',episodes:[ep('one'),ep('two')]})).json();assert.equal(b.existing,true);assert.equal(b.channel.id,a.channel.id);
+ const insert=db.prepare('INSERT INTO podcast_channels(id,feed,title,payload,created_by,updated_at) VALUES(?,?,?,?,?,?)');const timestamp=new Date().toISOString();
+ insert.run('legacy-alias','https://alias.example/feed','Same Show',JSON.stringify({id:'legacy-alias',feed:'https://alias.example/feed',title:'Same Show',episodes:[ep('one'),ep('two'),ep('three')]}),'alice',timestamp);
+ insert.run('distinct-show','https://different.example/feed','Same Show',JSON.stringify({id:'distinct-show',feed:'https://different.example/feed',title:'Same Show',episodes:[ep('different')]}),'alice',timestamp);
+ const channels=await (await call(env,'/podcasts/channels','alice')).json();assert.equal(channels.channels.length,2);const merged=channels.channels.find(c=>c.aliases.length);assert.ok(merged);const result=await (await call(env,'/podcasts/episodes?id='+encodeURIComponent(merged.aliases[0]),'alice')).json();assert.equal(result.episodes.length,3);assert.equal(result.id,merged.id);assert.equal(db.prepare('SELECT count(*) n FROM podcast_channels').get().n,3);db.close();
+});
