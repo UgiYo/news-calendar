@@ -10,7 +10,8 @@ localStorage.setItem('stock-news-session','alice');localStorage.setItem('stock-a
 const intervals=globalThis.setInterval;globalThis.setInterval=()=>0;
 const companies=[{code:'2330',name:'台積電',full_name:'台灣積體電路',market:'上市'},{code:'US:NVDA',name:'輝達',full_name:'NVIDIA',market:'美股'}];
 const news=[{company_code:'2330',news_date:'2026-10-08',published_at:'2026-10-08T01:00:00Z',title:'台積電台股專用新聞',source:'中央社',url:'https://www.cna.com.tw/tw'},{company_code:'US:NVDA',news_date:'2026-10-08',published_at:'2026-10-08T18:00:00Z',title:'NVIDIA US only news',source:'Reuters',url:'https://www.reuters.com/us'}];
-let accountSyncEnabled=true;const calls=[];globalThis.fetch=async(value,options={})=>{const u=new URL(value,'https://ui.test');calls.push(u.pathname+u.search);let result={};
+let featureFlags={};let accountSyncEnabled=true;const calls=[];globalThis.fetch=async(value,options={})=>{const u=new URL(value,'https://ui.test');calls.push(u.pathname+u.search);let result={};
+ if(u.pathname==='/features')result={features:featureFlags};
  if(u.pathname==='/watchlists')result={companies};
  if(u.pathname==='/account-settings'){if(options.body)accountSyncEnabled=JSON.parse(options.body).sync_enabled;result={owner_id:'alice',sync_enabled:accountSyncEnabled};}
  if(u.pathname==='/news')result={news};
@@ -23,7 +24,7 @@ let accountSyncEnabled=true;const calls=[];globalThis.fetch=async(value,options=
  if(u.pathname==='/account-results')result={owner_id:'alice',results:[],deleted:[]};
  return Response.json(result);
 };
-const source=readFileSync('src/main.js','utf8').replace(/^render\(\);const initialPodcasts=.*$/m,'render();')+'\nexport {state,render,switchMarket,openRankingStock,search};';
+const source=readFileSync('src/main.js','utf8').replace(/^render\(\);const initialPodcasts=.*$/m,'render();')+'\nexport {state,render,switchMarket,openRankingStock,search,refreshFeatures};';
 const compiled=await build({stdin:{contents:source,resolveDir:process.cwd()+'/src'},bundle:true,platform:'node',format:'esm',write:false,loader:{'.css':'empty'},define:{'import.meta.env':JSON.stringify({VITE_WORKER_API_URL:'https://api.test',BASE_URL:'/'})}});
 try{
  const mod=await import('data:text/javascript;base64,'+Buffer.from(compiled.outputFiles[0].text).toString('base64'));
@@ -47,5 +48,16 @@ try{
  const snapshot=JSON.parse(localStorage.getItem('stock-account-sync:alice:data'));assert.deepEqual(snapshot.companies.map(c=>c.code),['2330','US:NVDA']);
  toggle().checked=true;toggle().dispatchEvent(new window.Event('change',{bubbles:true}));for(let i=0;i<100&&!mod.state.message.includes('已開啟此帳號');i++)await new Promise(r=>setTimeout(r,5));
  assert.ok(mod.state.message.includes('已開啟此帳號'));assert.equal(accountSyncEnabled,true);assert.equal(mod.state.companies.length,2);
+ featureFlags={'ai_tools.assistant':false,'ai_tools.results':false};await mod.refreshFeatures();await Promise.resolve();
+ assert.equal(document.querySelector('#site-assistant-launch').hidden,true);
+ assert.equal(document.querySelector('#open-ai-results').getAttribute('data-feature-disabled'),'true');
+ document.querySelector('#site-assistant-launch').click();assert.equal(document.querySelector('#site-assistant-panel').hidden,true);
+ featureFlags={'ai_tools.assistant':true,'ai_tools.results':true};await mod.refreshFeatures();await Promise.resolve();
+ assert.equal(document.querySelector('#site-assistant-launch').hidden,false);
+ assert.equal(document.querySelector('#open-ai-results').hasAttribute('data-feature-disabled'),false);
+ document.querySelector('#site-assistant-launch').click();assert.equal(document.querySelector('#site-assistant-panel').hidden,false);
+ featureFlags={'ai_tools.assistant':false};await mod.refreshFeatures();await Promise.resolve();
+ assert.equal(document.querySelector('#site-assistant-panel').hidden,true);
+ mod.state.user=null;mod.render();await Promise.resolve();assert.equal(document.querySelector('#site-assistant-launch').hidden,true);
  console.log('US market DOM integration passed: tabs, isolated news, mixed watchlist, filters, per-market dates, search and daily candle dialog.');
 }finally{globalThis.setInterval=intervals;}

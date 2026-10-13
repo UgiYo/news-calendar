@@ -169,7 +169,7 @@ export default {async fetch(req,env){
  await sql('INSERT INTO managed_users(user_id,first_login_at,last_login_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET last_login_at=excluded.last_login_at',identity.sub,Date.now(),Date.now()).run();
  return new Response(null,{status:302,headers:{Location:appURL.href+'#session='+token,'Set-Cookie':'oauth_state=; Secure; HttpOnly; SameSite=Lax; Max-Age=0; Path=/auth','Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});
  }
- const managementAuth=await managementRoute(req,env,{sql,reply,randomToken});if(managementAuth)return managementAuth;
+ const managementAuth=path==='/features'&&req.headers.get('Authorization')?null:await managementRoute(req,env,{sql,reply,randomToken});if(managementAuth)return managementAuth;
  if(path.startsWith('/admin/')){
  const provided=req.headers.get('Authorization')||'';if(!env.COLLECTOR_SECRET||await hash(provided)!==await hash('Bearer '+env.COLLECTOR_SECRET))return reply({error:'Forbidden'},403);
  const rankingUpdate=await rankingRefreshRoute(req,{sql,reply,db:env.DB,dispatch,env,admin:true});if(rankingUpdate)return rankingUpdate;

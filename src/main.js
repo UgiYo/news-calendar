@@ -10,7 +10,7 @@ import {countPodcastDayEntries} from '../shared/podcast-day.js';
 import {createRankingRefresher} from './ranking-refresh.js';
 import {accountSettingsWindow,bindAccountSettings} from './account-settings.js';
 import {trackedPublicReports} from './public-broker-reports.js';
-import {installSiteAssistant} from './site-assistant.js';
+import {installSiteAssistant,setSiteAssistantEnabled} from './site-assistant.js';
 import {podcastAutoState,setPodcastAuto,runPodcastAuto,skipPodcastEpisode} from './podcast-auto.js';
 import {marketOpen,mergeLiveBars} from './live-candles.js';
 import {podcastMentionSources,acquirePodcastTranscripts} from './podcasts.js';
@@ -188,12 +188,12 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 function accountEmail(user){return String(user?.email??user?.email_address??user?.emailAddress??user?.profile?.email??user?.user?.email??'').trim()||'登入者';}
 let accountSettingsOpen=false;
 const applyFeatureVisibility=()=>queueMicrotask(()=>{
- if(!state.user)return;
+ setSiteAssistantEnabled(state.featureFlags?.['ai_tools.assistant']!==false);
  const map={'news_calendar.news':['#news-tab-panel'],'news_calendar.podcast':['.podcast-controls','.podcast-daily','#day-tab-podcast'],'market_watch.turnover':['#ranking-tab','.sector-trend'],'market_watch.observation':['.watch-chain-panel'],'market_watch.stock_events':['.movement-overview-collapsible'],'stock_tools.candles':['[data-chart]','[data-holding-chart]'],'stock_tools.broker_reports':['.public-broker-reports','#open-holdings'],'ai_tools.assistant':['#site-assistant-launch','#site-assistant-panel'],'ai_tools.results':['#open-ai-results','#ai-notifications']};
  for(const [key,selectors] of Object.entries(map)){
-  if(state.featureFlags?.[key]!==false)continue;
+  const disabled=state.featureFlags?.[key]===false;
   for(const selector of selectors){
-   for(const el of document.querySelectorAll(selector))el.hidden=true;
+   for(const el of document.querySelectorAll(selector)){if(disabled)el.setAttribute('data-feature-disabled','true');else el.removeAttribute('data-feature-disabled');}
   }
  }
 });
@@ -258,7 +258,7 @@ app.querySelectorAll('[data-ai-day]').forEach(b=>b.onclick=()=>openAINews({rows:
 app.querySelector('#summary-ai-settings')?.addEventListener('click',()=>openAIWindow());
 app.querySelector('#summarize-all')?.addEventListener('click',()=>openAINews({rows:filtered.filter(n=>n.news_date.startsWith(`${state.year}-${String(state.month+1).padStart(2,'0')}`)),title:'本月份多篇新聞內文總結'}));
 app.querySelector('#login')?.addEventListener('click',()=>run(login));
-app.querySelector('#logout')?.addEventListener('click',()=>run(async()=>{await logout();monthCache.clear();state.market='TW';state.watchMarket='ALL';state.marketViews={};state.user=null;resetSharedPodcastChannels();podcast.episodes=podcast.episodes.filter(e=>['zhaohua','gooaye'].includes(e.channel_id));holdingsDetail=null;rankingDetail=null;rankingRequest++;state.preview=[];state.previewCompany=null;state.companies=[];state.news=[];state.selected='';state.summaryOpen=false;state.rankingPage=false;}));
+app.querySelector('#logout')?.addEventListener('click',()=>run(async()=>{await logout();monthCache.clear();state.market='TW';state.watchMarket='ALL';state.marketViews={};state.user=null;await refreshFeatures();resetSharedPodcastChannels();podcast.episodes=podcast.episodes.filter(e=>['zhaohua','gooaye'].includes(e.channel_id));holdingsDetail=null;rankingDetail=null;rankingRequest++;state.preview=[];state.previewCompany=null;state.companies=[];state.news=[];state.selected='';state.summaryOpen=false;state.rankingPage=false;}));
 app.querySelector('#query').oninput=e=>{state.query=e.target.value;};
 app.querySelector('#search').onsubmit=e=>{e.preventDefault();state.query=app.querySelector('#query').value.trim();run(search);};
 app.querySelectorAll('[data-movement]').forEach(b=>b.onclick=()=>openMovement(b.dataset.movement));
@@ -332,7 +332,7 @@ async function collect(code){
 }
 window.addEventListener('account-sync-status',e=>{if(e.detail.who===state.user?.id&&syncEnabled()){const label=app.querySelector('#account-sync-status');if(label)label.textContent=e.detail.message;}});
 let mentionRefreshTimer;for(const event of ['account-result-saved','account-result-deleted','podcast-results-changed'])window.addEventListener(event,e=>{if(event==='account-result-saved'&&(e.detail.row.kind!=='podcast'||!e.detail.row.text||![state.user?.id||'guest','local'].includes(e.detail.who)))return;clearTimeout(mentionRefreshTimer);mentionRefreshTimer=setTimeout(()=>render(),100);});
-render();const initialPodcasts=loadPodcasts();if(configured)run(async()=>{state.user=await restore();if(state.user){setSyncOwner(state.user.id);try{const sessionToken=localStorage.getItem('stock-news-session');await restoreWatchlistSync({who:state.user.id,request:(path,options={})=>remoteAPI(path,{...options,sessionToken})});}catch(e){state.message='追蹤同步設定未能載入，已保留本機資料：'+e.message;}try{state.featureFlags=(await api('/features')).features;}catch{state.featureFlags=null;}}render();if(state.user){await initialPodcasts;const migrationError=await migrateLocalPodcastChannels();Object.assign(podcast,podcastPreferences());await loadPodcasts();if(migrationError){podcast.error=migrationError;render();}await Promise.all([load(),loadRanking()]);}});
+render();const initialPodcasts=loadPodcasts();if(configured)run(async()=>{state.user=await restore();if(state.user){setSyncOwner(state.user.id);try{const sessionToken=localStorage.getItem('stock-news-session');await restoreWatchlistSync({who:state.user.id,request:(path,options={})=>remoteAPI(path,{...options,sessionToken})});}catch(e){state.message='追蹤同步設定未能載入，已保留本機資料：'+e.message;}}await refreshFeatures();render();if(state.user){await initialPodcasts;const migrationError=await migrateLocalPodcastChannels();Object.assign(podcast,podcastPreferences());await loadPodcasts();if(migrationError){podcast.error=migrationError;render();}await Promise.all([load(),loadRanking()]);}});
 
 function summaryWindow(rows){const groups=Object.groupBy(rows,n=>n.news_date);return `<div class="modal-backdrop"><section class="summary-dialog" id="summary-dialog" role="dialog" aria-modal="true" aria-labelledby="summary-title"><div class="modal-heading"><div><h2 id="summary-title">新聞內文摘要 · ${state.year} 年 ${state.month+1} 月</h2><small>使用上方已設定的個人 AI，先讀取來源內文再生成摘要</small></div><button id="close-summary" aria-label="關閉摘要視窗">×</button></div><div class="stock-actions"><button id="summarize-all" ${!rows.length||!state.user?'disabled':''}>生成本月份多篇新聞總結</button><button id="summary-ai-settings">查看目前 AI 設定</button></div><div class="date-news">${Object.keys(groups).sort().reverse().map(date=>`<section><h3>${esc(date)} · ${groups[date].length} 則</h3><button ${state.user?'':'disabled'} data-ai-day="${esc(date)}">生成當日 AI 總結</button><ul>${groups[date].map(n=>`<li><div class="meta">${esc(n.company_code)} · ${esc(n.source)}</div><a href="${esc(safeURL(n.article_url||n.url))}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a>${n.article_summary?`<span class="summary-label">既有${n.summary_method==='ai'?' AI 摘要':'內文摘錄'}</span><div class="article-summary markdown-preview markdown-body">${renderMarkdown(n.article_summary)}</div>`:''}<button ${state.user?'':'disabled'} data-local-ai="${esc(String((state.previewCompany?state.preview:state.news).filter(n=>marketOf(n)===state.market&&(!state.selected||n.company_code===state.selected)).indexOf(n)))}">讀取內文並生成 AI 摘要</button></li>`).join('')}</ul></section>`).join('')||'<p class="empty">此月份尚無新聞。</p>'}</div></section></div>`;}
 
@@ -387,3 +387,15 @@ async function refreshWatchlistSync(){
 window.addEventListener('focus',()=>void refreshWatchlistSync());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshWatchlistSync();});
 setInterval(()=>void refreshWatchlistSync(),60000);
+
+let featureRefreshPending=false;
+async function refreshFeatures(){
+ if(!configured||featureRefreshPending)return;
+ const owner=state.user?.id;featureRefreshPending=true;
+ try{const result=await remoteAPI('/features');if(state.user?.id===owner){state.featureFlags=result.features;applyFeatureVisibility();}}
+ catch{/* Retain the last known settings when the network is unavailable. */}
+ finally{featureRefreshPending=false;}
+}
+window.addEventListener('focus',()=>void refreshFeatures());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshFeatures();});
+setInterval(()=>{if(!document.hidden)void refreshFeatures();},30000);
