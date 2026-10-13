@@ -297,3 +297,14 @@ test('news failures retain HTTP reason and collector history without secrets or 
  const job=await (await call(env,'/device-collect?id='+queued.job.id,'alice')).json();assert.equal(job.attempt.details.collected,0);
  assert.equal((await call(env,'/news-update-history?code=6515')).status,401);assert.equal(db.prepare('SELECT count(*) n FROM watchlists').get().n,0);db.close();
 });
+test('generic Spotify candidates persist across cache loss and accounts and stale candidates survive directory outages',async()=>{
+ const {db,env}=setup();for(const id of ['alice','bob']){db.prepare('INSERT INTO users VALUES(?,?)').run(id,id+'@example.com');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(await hash(id),id,Date.now()+60000);}
+ const originalFetch=globalThis.fetch,originalCaches=globalThis.caches;globalThis.caches=undefined;const paths=[];
+ globalThis.fetch=async url=>{paths.push(String(url));if(String(url).startsWith('https://open.spotify.com/'))return new Response('<meta property="og:title" content="Durable Show"/>');if(String(url).startsWith('https://itunes.apple.com/'))return new Response('limited',{status:429});return Response.json({status:1,data:[{title:'Durable Show',author:'Host',xmlURL:'https://feeds.example.com/durable.xml'}]});};
+ const show='https://open.spotify.com/show/1234567890123456789012';
+ try{const first=await (await call(env,'/podcasts/resolve','alice',{url:show+'?si=a'})).json();assert.equal(first.candidates[0].source,'fyyd');assert.equal(paths.length,3);
+ const reused=await (await call(env,'/podcasts/resolve','bob',{url:show+'?si=b'})).json();assert.equal(reused.candidates[0].feed,first.candidates[0].feed);assert.equal(paths.length,3);
+ db.prepare('UPDATE spotify_feed_lookups SET updated_at=0').run();globalThis.fetch=async()=>new Response('unavailable',{status:503});const stale=await (await call(env,'/podcasts/resolve','alice',{url:show})).json();assert.match(stale.warning,/先前保存/);assert.equal(stale.candidates[0].feed,first.candidates[0].feed);
+ assert.equal((await call(env,'/podcasts/resolve',null,{url:show})).status,401);
+ }finally{globalThis.fetch=originalFetch;globalThis.caches=originalCaches;db.close();}
+});

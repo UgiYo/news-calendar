@@ -398,3 +398,11 @@ SEC 請求可透過 Worker 的 `SEC_USER_AGENT` 設定含聯絡資訊的 User-Ag
 需要執行收集時，`Update company news` 的 run name 顯示觸發股號與帳號識別碼，執行摘要列出請求來源；collector 完成各個股任務後，會在 log 與 Step Summary 列出觸發時間（UTC）、觸發者、收集數量，以及 success／empty／failed 結果。同一個 run 可能處理多人排入的任務，各個股以任務 ID 分列。觸發紀錄僅能透過 collector secret 保護的 `/admin/news-triggers` 查詢，不回傳一般新聞／任務 API，也不公開 email 或 token。舊任務仍能執行，但無法追補過往觸發者。
 
 沿用處理中或 15 分鐘內已完成任務時，不會額外啟動 Actions；這些請求仍會保存。已完成任務之後新增的請求無法追加到結束的 Actions 摘要，可透過後端紀錄追查。裝置直接讀取成功、未使用備援收集時不經 Actions。Worker 與 workflow 必須一併部署才會有完整紀錄。
+
+### Spotify 頻道通用 RSS 備援
+
+Spotify 匯入優先使用已保存的候選 RSS，再讀取節目頁公開 RSS／節目資訊，搜尋 Apple Podcast 目錄；主要目錄失敗或沒有符合節目的候選時，改查 fyyd 獨立目錄。Spotify 節目頁讀取失敗時使用官方 oEmbed 補取節目名稱。候選仍須核對節目與作者後才匯入，不自動選擇同名節目。
+
+成功候選保存於 D1 `spotify_feed_lookups`，七天內可跨裝置、跨登入者重用公開節目資訊；搜尋服務暫時失效時提供先前候選並提示重新核對。Edge 成功快取 24 小時，無候選結果快取 60 秒以減少重複請求；追蹤參數不影響查詢識別。同時查詢同一節目的請求共用進行中的搜尋。資料表首次使用自動建立，無需新增 Secret。
+
+目錄仍有收錄與可用性限制；Spotify 獨家或未公開 RSS 的節目無法以 RSS 匯入，仍可直接提供已知公開 RSS。

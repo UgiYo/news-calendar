@@ -916,46 +916,92 @@ function payload(data, id, feed) {
   if (new TextEncoder().encode(JSON.stringify(result)).length > 15e5) throw Error("Podcast \u8CC7\u6599\u8D85\u51FA\u5927\u5C0F\u4E0A\u9650");
   return result;
 }
+var normalizeTitle = (v) => String(v || "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+var decodeHTML = (v) => String(v || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#(\d+);/g, (_, n) => Number(n) <= 1114111 ? String.fromCodePoint(Number(n)) : "");
+var attributes = (tag) => Object.fromEntries([...tag.matchAll(/([\w:-]+)\s*=\s*["']([^"']*)["']/g)].map((m) => [m[1].toLowerCase(), decodeHTML(m[2])]));
 async function resolveSpotifyPodcast(value, fetcher = globalThis.fetch) {
   const url = spotifyShowURL(value), known = verifiedSpotifyFeed(url);
   if (known) return { title: known.title, candidates: [known] };
-  const read = async (endpoint) => {
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const r = await fetcher(endpoint, { redirect: "manual", signal: AbortSignal.timeout(1e4), headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" } });
+  const deadline = AbortSignal.timeout(22e3), diagnostics = [];
+  const read = async (endpoint, host, json = true) => {
+    for (let redirect = 0; redirect < 3; redirect++) {
+      const r = await fetcher(endpoint, { redirect: "manual", signal: AbortSignal.any([deadline, AbortSignal.timeout(5e3)]), headers: { Accept: json ? "application/json" : "text/html", "User-Agent": "Mozilla/5.0" } });
       if (r.status >= 300 && r.status < 400) {
         const next = new URL(r.headers.get("Location") || "", endpoint);
-        if (next.protocol !== "https:" || next.hostname !== "itunes.apple.com" || next.username || next.password || next.port) throw Error("\u641C\u5C0B\u4F86\u6E90\u8F49\u5740\u4E0D\u53D7\u652F\u63F4\u3002");
+        if (next.protocol !== "https:" || next.hostname !== host || next.username || next.password || next.port) throw Error("\u4F86\u6E90\u8F49\u5740\u4E0D\u53D7\u652F\u63F4");
         endpoint = next.href;
         continue;
       }
-      if (!r.ok) throw Error(r.status === 429 ? "Podcast \u76EE\u9304\u641C\u5C0B\u76EE\u524D\u9650\u6D41\uFF08HTTP 429\uFF09\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\uFF0C\u6216\u76F4\u63A5\u8CBC\u4E0A\u7BC0\u76EE\u7684\u516C\u958B RSS \u7DB2\u5740\u3002" : "Podcast \u76EE\u9304\u641C\u5C0B\u5931\u6557\uFF08HTTP " + r.status + "\uFF09\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002");
-      return r.json();
+      if (!r.ok) throw Error("HTTP " + r.status);
+      const text = await r.text();
+      if (text.length > 2e6) throw Error("\u56DE\u61C9\u8D85\u904E\u5927\u5C0F\u4E0A\u9650");
+      return json ? JSON.parse(text) : text;
     }
-    throw Error("Podcast \u76EE\u9304\u8F49\u5740\u6B21\u6578\u904E\u591A\u3002");
+    throw Error("\u8F49\u5740\u6B21\u6578\u904E\u591A");
   };
-  const page = await fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(1e4), headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0" } });
-  if (!page.ok) throw Error("Spotify \u7BC0\u76EE\u9801\u66AB\u6642\u7121\u6CD5\u8B80\u53D6\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002");
-  const html = await page.text();
-  const decode = (v) => v.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
-  const title = decode(html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i)?.[1] || "").trim();
-  if (!title || title.length > 500) throw Error("\u7121\u6CD5\u53D6\u5F97 Spotify \u7BC0\u76EE\u540D\u7A31\u3002");
-  const results = await read("https://itunes.apple.com/search?media=podcast&entity=podcast&country=TW&limit=25&term=" + encodeURIComponent(title));
-  const normalize = (v) => String(v || "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-  const target = normalize(title), seen = /* @__PURE__ */ new Set(), candidates = [];
-  for (const row of results.results || []) {
-    const name = String(row.collectionName || row.trackName || ""), n = normalize(name);
-    if (!n || !(n === target || n.includes(target) || target.includes(n))) continue;
+  let title = "", html = "";
+  try {
+    html = await read(url, "open.spotify.com", false);
+    for (const tag of html.matchAll(/<meta\b[^>]*>/gi)) {
+      const attr = attributes(tag[0]);
+      if (attr.property === "og:title") {
+        title = attr.content?.trim() || "";
+        break;
+      }
+    }
+  } catch (e) {
+    diagnostics.push("Spotify " + e.message);
+  }
+  if (!title) {
+    try {
+      const meta = await read("https://open.spotify.com/oembed?url=" + encodeURIComponent(url), "open.spotify.com");
+      title = String(meta.title || "").trim();
+    } catch (e) {
+      diagnostics.push("Spotify metadata " + e.message);
+    }
+  }
+  if (!title || title.length > 500) throw Error("Spotify \u7BC0\u76EE\u8CC7\u8A0A\u66AB\u6642\u7121\u6CD5\u8B80\u53D6\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u6216\u76F4\u63A5\u8CBC\u4E0A\u516C\u958B RSS\u3002" + diagnostics.join("\uFF1B"));
+  const target = normalizeTitle(title), seen = /* @__PURE__ */ new Set(), candidates = [];
+  const add = (name, author, value2, source) => {
+    const n = normalizeTitle(name);
+    if (!n || !(n === target || Math.min(n.length, target.length) >= 4 && (n.includes(target) || target.includes(n)))) return;
     let feed;
     try {
-      feed = podcastFeed(row.feedUrl);
+      feed = podcastFeed(value2);
     } catch {
-      continue;
+      return;
     }
-    if (seen.has(feed)) continue;
+    if (seen.has(feed)) return;
     seen.add(feed);
-    candidates.push({ title: name, author: String(row.artistName || ""), feed });
+    candidates.push({ title: String(name).slice(0, 500), author: String(author || "").slice(0, 500), feed, source });
+  };
+  for (const tag of html.matchAll(/<link\b[^>]*>/gi)) {
+    const attr = attributes(tag[0]);
+    if (attr.rel?.split(/\s+/).includes("alternate") && ["application/rss+xml", "application/atom+xml"].includes(attr.type?.toLowerCase())) add(title, "", attr.href, "spotify");
   }
-  return { title, candidates: candidates.slice(0, 10) };
+  if (candidates.length) return { title, candidates };
+  try {
+    const results = await read("https://itunes.apple.com/search?media=podcast&entity=podcast&country=TW&limit=25&term=" + encodeURIComponent(title), "itunes.apple.com");
+    for (const row of results.results || []) add(row.collectionName || row.trackName, row.artistName, row.feedUrl, "apple");
+  } catch (e) {
+    diagnostics.push("Apple Podcast " + e.message);
+  }
+  if (!candidates.length) {
+    try {
+      const results = await read("https://api.fyyd.de/0.2/search/podcast?term=" + encodeURIComponent(title) + "&count=25", "api.fyyd.de");
+      if (results.status !== 1 || !Array.isArray(results.data)) throw Error("\u76EE\u9304\u56DE\u61C9\u683C\u5F0F\u7570\u5E38");
+      for (const row of results.data) add(row.title, row.author, row.xmlURL, "fyyd");
+    } catch (e) {
+      diagnostics.push("\u5099\u63F4\u76EE\u9304 " + e.message);
+    }
+  }
+  return { title, candidates: candidates.slice(0, 10), ...diagnostics.length ? { warning: candidates.length ? "\u4E3B\u8981\u641C\u5C0B\u66AB\u6642\u7121\u6CD5\u4F7F\u7528\uFF0C\u5DF2\u627E\u5230\u5099\u63F4\u7D50\u679C\uFF0C\u8ACB\u6838\u5C0D\u7BC0\u76EE\u8207\u4F5C\u8005\u3002" : "\u641C\u5C0B\u4F86\u6E90\u66AB\u6642\u7121\u6CD5\u4F7F\u7528\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u6216\u76F4\u63A5\u8CBC\u4E0A\u516C\u958B RSS\u3002", diagnostics } : {} };
+}
+var resolving = /* @__PURE__ */ new Map();
+async function savedSpotifyLookup(sql, url) {
+  if (!sql) return null;
+  await sql("CREATE TABLE IF NOT EXISTS spotify_feed_lookups(show_url TEXT PRIMARY KEY,payload TEXT NOT NULL,updated_at INTEGER NOT NULL)").run();
+  return sql("SELECT payload,updated_at FROM spotify_feed_lookups WHERE show_url=?", url).first();
 }
 async function sharedPodcastsRoute(req, { sql, reply, user, admin = false, hash: hash3 }) {
   const u = new URL(req.url), path = u.pathname;
@@ -967,8 +1013,23 @@ async function sharedPodcastsRoute(req, { sql, reply, user, admin = false, hash:
       const canonical = spotifyShowURL((await req.json()).url), cache = globalThis.caches?.default, key = new Request(u.origin + "/cache/podcasts/resolve/" + canonical.split("/").at(-1));
       const cached = await cache?.match(key);
       if (cached) return reply(await cached.json());
-      const result = await resolveSpotifyPodcast(canonical);
-      if (cache && result.candidates.length) await cache.put(key, Response.json(result, { headers: { "Cache-Control": "public, max-age=86400" } }));
+      const stored = await savedSpotifyLookup(sql, canonical);
+      if (stored && stored.updated_at > Date.now() - 7 * 864e5) return reply(JSON.parse(stored.payload));
+      if (!resolving.has(canonical)) resolving.set(canonical, resolveSpotifyPodcast(canonical).finally(() => resolving.delete(canonical)));
+      let result;
+      try {
+        result = await resolving.get(canonical);
+      } catch (e) {
+        if (!stored) throw e;
+        result = { ...JSON.parse(stored.payload), warning: "\u641C\u5C0B\u66AB\u6642\u7121\u6CD5\u4F7F\u7528\uFF0C\u5DF2\u63D0\u4F9B\u5148\u524D\u4FDD\u5B58\u7684\u5019\u9078 RSS\uFF0C\u8ACB\u518D\u6B21\u6838\u5C0D\u3002" };
+      }
+      if (!result.candidates.length && stored) result = { ...JSON.parse(stored.payload), warning: "\u672A\u80FD\u53D6\u5F97\u65B0\u7684\u641C\u5C0B\u7D50\u679C\uFF0C\u5DF2\u63D0\u4F9B\u5148\u524D\u4FDD\u5B58\u7684\u5019\u9078 RSS\uFF0C\u8ACB\u518D\u6B21\u6838\u5C0D\u3002" };
+      if (result.candidates.length) {
+        const saved = { title: result.title, candidates: result.candidates };
+        if (sql && !result.warning) await sql("INSERT INTO spotify_feed_lookups(show_url,payload,updated_at) VALUES(?,?,?) ON CONFLICT(show_url) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at", canonical, JSON.stringify(saved), Date.now()).run();
+        else if (sql && !stored) await sql("INSERT INTO spotify_feed_lookups(show_url,payload,updated_at) VALUES(?,?,?) ON CONFLICT(show_url) DO NOTHING", canonical, JSON.stringify(saved), Date.now()).run();
+      }
+      if (cache) await cache.put(key, Response.json(result, { headers: { "Cache-Control": "public, max-age=" + (result.candidates.length ? result.warning ? 300 : 86400 : 60) } }));
       return reply(result);
     } catch (e) {
       return reply({ error: e.message }, 400);
