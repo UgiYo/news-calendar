@@ -5,6 +5,41 @@ import {readFileSync} from 'node:fs';
 import worker,{hash,verifyGoogle,extractArticleBody,checkedArticleURL,normalizeArticleURL,readArticleURL,parseCompanyProfile} from '../worker/index.js';
 function setup(){const db=new DatabaseSync(':memory:');db.exec(readFileSync(new URL('../worker/migrations/0001_init.sql',import.meta.url),'utf8'));const adapter={prepare(q){return {bind(...args){const s=db.prepare(q);return {async first(){return s.get(...args)||null},async all(){return {results:s.all(...args)}},async run(){return s.run(...args)}}}}},async batch(list){return Promise.all(list.map(x=>x.run()))}};return {db,env:{DB:adapter,APP_URL:'https://example.com/',GOOGLE_CLIENT_ID:'client',COLLECTOR_SECRET:'secret',GITHUB_REPO:'owner/repo'}};}
 async function call(env,path,token,body,method){return worker.fetch(new Request('https://worker.example'+path,{method:method||(body?'POST':'GET'),headers:token?{Authorization:'Bearer '+token}:{},body:body?JSON.stringify(body):undefined}),env);}
+test('collection triggers audit authenticated actors, shared tasks and reuse without leaking identity',async()=>{
+ const {db,env}=setup(),original=globalThis.fetch,dispatches=[];
+ env.GITHUB_DISPATCH_TOKEN='fixture-dispatch';
+ for(const id of ['alice','bob']){
+  db.prepare('INSERT INTO users VALUES(?,?)').run(id,id+'@example.com');
+  db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(await hash(id),id,Date.now()+60000);
+ }
+ db.exec("INSERT INTO companies(code,name,full_name,market) VALUES('2330','台積電','台積電','上市');INSERT INTO watchlists VALUES('alice','2330','now');INSERT INTO watchlists VALUES('bob','2330','now');");
+ globalThis.fetch=async(url,options)=>{dispatches.push(JSON.parse(options.body));return new Response(null,{status:204});};
+ try{
+  const first=await (await call(env,'/collect','alice',{code:'2330',request_actor:'forged',request_source:'forged'})).json();
+  const second=await (await call(env,'/collect','bob',{code:'2330'})).json();
+  assert.equal(first.job.id,second.job.id);
+  assert.equal(dispatches[0].inputs.request_actor,(await hash('news-trigger:alice')).slice(0,16));
+  assert.equal(dispatches[0].inputs.request_source,'user-update');
+  assert.equal(dispatches[0].inputs.mode,'queued');assert.equal(dispatches[0].inputs.request_code,'2330');
+  assert.notEqual(dispatches[0].inputs.request_id,dispatches[1].inputs.request_id);
+  assert.equal((await call(env,'/admin/news-triggers?job_id='+first.job.id,'alice')).status,403);
+  let audit=await (await call(env,'/admin/news-triggers?job_id='+first.job.id,'secret')).json();
+  assert.equal(audit.triggers.length,2);assert.ok(!JSON.stringify(audit).includes('@example.com'));
+  assert.ok(!JSON.stringify(await (await call(env,'/jobs?id='+first.job.id,'alice')).json()).includes('request_actor'));
+  await call(env,'/admin/claim','secret',{});
+  await call(env,'/device-collect','alice',{code:'2330'});
+  assert.equal(dispatches.length,2); // running task is joined without another Actions run
+  await call(env,'/admin/news-attempts','secret',{code:'2330',job_id:first.job.id,status:'empty',details:{collected:0}});
+  await call(env,'/admin/job','secret',{id:first.job.id});
+  await call(env,'/collect','alice',{code:'2330'});
+  assert.equal(dispatches.length,2); // recently completed result is reused
+  audit=await (await call(env,'/admin/news-triggers?job_id='+first.job.id,'secret')).json();
+  assert.equal(audit.triggers.length,4);assert.ok(audit.triggers.some(t=>t.source==='device-fallback'));assert.ok(audit.triggers.some(t=>t.status==='done'));
+  assert.equal((await call(env,'/collect',null,{code:'2330'})).status,401);
+  assert.equal((await call(env,'/collect','alice',{code:'9999'})).status,403);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM news_collection_triggers').get().n,4);
+ }finally{globalThis.fetch=original;db.close();}
+});
 test('shared summaries reuse across users and only lease owner can publish',async()=>{
  const {db,env}=setup();for(const id of ['alice','bob']){db.prepare('INSERT INTO users VALUES(?,?)').run(id,id+'@example.com');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(await hash(id),id,Date.now()+60000);}
  const key='a'.repeat(64),body={key,action:'claim'};

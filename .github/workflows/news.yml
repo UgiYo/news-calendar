@@ -1,4 +1,5 @@
 name: Update company news
+run-name: ${{ inputs.request_id && format('News · {0} · account {1}', inputs.request_code, inputs.request_actor) || format('News · {0} · {1}', github.event_name, inputs.mode || 'daily') }}
 on:
   schedule:
     # GitHub cron uses UTC: Taiwan 06:17 primary, 07:17 and 08:17 recovery.
@@ -19,6 +20,22 @@ on:
         type: choice
         options: [queued, daily]
         default: queued
+      request_id:
+        type: string
+        description: Opaque update request ID
+        required: false
+      request_actor:
+        type: string
+        description: Hashed account identifier (no email)
+        required: false
+      request_code:
+        type: string
+        description: Requested stock code
+        required: false
+      request_source:
+        type: string
+        description: user-update or device-fallback
+        required: false
 permissions:
   contents: read
   actions: read
@@ -39,10 +56,18 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Record news update trigger
+        env:
+          NEWS_REQUEST_ID: ${{ inputs.request_id }}
+          NEWS_REQUEST_ACTOR: ${{ inputs.request_actor }}
+          NEWS_REQUEST_CODE: ${{ inputs.request_code }}
+          NEWS_REQUEST_SOURCE: ${{ inputs.request_source }}
+        run: python3 scripts/news_action_audit.py
       - name: Test schedule recovery and quota handling
         run: |
           python3 -m unittest discover -s tests -p 'test_news_schedule_guard.py' -v
           python3 -m unittest discover -s tests -p 'test_collect*.py' -v
+          python3 -m unittest discover -s tests -p 'test_news_action_audit.py' -v
       - name: Check whether daily news already succeeded
         id: guard
         env:

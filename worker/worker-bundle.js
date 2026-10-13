@@ -1,3 +1,18 @@
+// worker/news-trigger-audit.js
+async function recordCollectionTrigger(sql, { id, jobId, code, actor, source, status }) {
+  await sql("CREATE TABLE IF NOT EXISTS news_collection_triggers(id TEXT PRIMARY KEY,job_id TEXT NOT NULL,company_code TEXT NOT NULL,actor TEXT NOT NULL,source TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL)").run();
+  await sql("CREATE INDEX IF NOT EXISTS collection_triggers_job ON news_collection_triggers(job_id,created_at)").run();
+  await sql("INSERT INTO news_collection_triggers(id,job_id,company_code,actor,source,status,created_at) VALUES(?,?,?,?,?,?,?)", id, jobId, code, actor, source, status, Date.now()).run();
+}
+async function collectionTriggers(sql, jobId) {
+  try {
+    return (await sql("SELECT * FROM news_collection_triggers WHERE job_id=? ORDER BY created_at,id", jobId).all()).results;
+  } catch (e) {
+    if (String(e.message).includes("no such table")) return [];
+    throw e;
+  }
+}
+
 // worker/account-settings.js
 async function accountSettingsRoute(req, { sql, reply, user }) {
   const url = new URL(req.url);
@@ -1801,6 +1816,7 @@ var index_default = { async fetch(req, env) {
         await recordNewsAttempt(sql, { code: b.code, jobId: b.job_id || null, stage: "collector", status: b.status, details: b.details });
         return reply({ ok: true });
       }
+      if (path === "/admin/news-triggers") return reply({ triggers: await collectionTriggers(sql, url.searchParams.get("job_id")) });
       if (path === "/admin/tracked") return reply({ companies: (await sql("SELECT DISTINCT c.* FROM companies c JOIN watchlists w ON c.code=w.company_code").all()).results });
       if (path === "/admin/claim" && req.method === "POST") {
         await sql("UPDATE jobs SET status='pending' WHERE status='running' AND claimed_at<?", Date.now() - 20 * 6e4).run();
@@ -2168,13 +2184,19 @@ var index_default = { async fetch(req, env) {
       } else if (!await sql("SELECT 1 FROM watchlists WHERE user_id=? AND company_code=?", user.id, code).first()) return reply({ error: "\u5C1A\u672A\u8FFD\u8E64\u6B64\u516C\u53F8" }, 403);
       const retryAI = b.retry_ai === true && news?.summary_method !== "ai";
       if (news?.article_summary && !retryAI) return reply({ news });
+      const audit = type === "collect" ? { id: randomToken(), actor: (await hash2("news-trigger:" + user.id)).slice(0, 16), source: path === "/device-collect" ? "device-fallback" : "user-update", code } : null;
+      const recordTrigger = async (job) => {
+        if (audit) await recordCollectionTrigger(sql, { ...audit, jobId: job.id, status: job.status || "pending" });
+      };
+      const dispatchCollection = () => dispatch(env, "news.yml", audit ? { mode: "queued", request_id: audit.id, request_actor: audit.actor, request_code: audit.code, request_source: audit.source } : void 0);
       const existing = await sql("SELECT * FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND status IN ('pending','running') ORDER BY created_at DESC LIMIT 1", type, code, news?.id || null).first();
       if (existing) {
+        await recordTrigger(existing);
         let dispatched2, dispatchError2;
         if (existing.status === "pending") {
           dispatched2 = false;
           try {
-            dispatched2 = await dispatch(env);
+            dispatched2 = await dispatchCollection();
           } catch (e) {
             dispatchError2 = e.message || "GitHub \u9023\u7DDA\u5931\u6557";
           }
@@ -2183,13 +2205,17 @@ var index_default = { async fetch(req, env) {
         return reply({ job: existing, news, dispatched: dispatched2, dispatchError: dispatchError2 }, 202);
       }
       const recent = await sql("SELECT * FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND created_at>? ORDER BY created_at DESC LIMIT 1", type, code, news?.id || null, Date.now() - 15 * 6e4).first();
-      if (recent?.status === "done" && !retryAI && (type !== "collect" || (await newsAttempts(sql, { jobId: recent.id })).length)) return reply({ job: recent, news }, 202);
+      if (recent?.status === "done" && !retryAI && (type !== "collect" || (await newsAttempts(sql, { jobId: recent.id })).length)) {
+        await recordTrigger(recent);
+        return reply({ job: recent, news }, 202);
+      }
       const id = randomToken();
       await sql("INSERT OR IGNORE INTO jobs(id,type,company_code,news_id,created_at) VALUES(?,?,?,?,?)", id, type, code, news?.id || null, Date.now()).run();
       const queued = await sql("SELECT id,status FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND status IN ('pending','running') LIMIT 1", type, code, news?.id || null).first();
+      await recordTrigger(queued);
       let dispatched = false, dispatchError;
       try {
-        dispatched = await dispatch(env);
+        dispatched = await dispatchCollection();
       } catch (e) {
         dispatchError = e.message || "GitHub \u9023\u7DDA\u5931\u6557";
       }

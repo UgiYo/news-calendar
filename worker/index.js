@@ -1,3 +1,4 @@
+import {recordCollectionTrigger,collectionTriggers} from './news-trigger-audit.js';
 import {accountSettingsRoute} from './account-settings.js';
 import {companyMention,trustedSource,sourceDomain,duplicateNews,isGeneratedAnswer,curateNews} from '../src/news-policy.js';
 import {isUS,validStockCode,enrichCompany,marketDay} from '../shared/markets.js';
@@ -202,6 +203,7 @@ export default {async fetch(req,env){
  if(path==='/admin/company-aliases'){const c=await sql('SELECT * FROM companies WHERE code=?',url.searchParams.get('code')).first();if(!c)return reply({error:'公司不存在'},404);return reply({names:(await sql('SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0',c.code,c.name,c.name).all()).results.map(x=>x.name)});}
  if(path==='/admin/collection-company'){const company=await sql('SELECT * FROM companies WHERE code=?',url.searchParams.get('code')).first();return company?reply({company}):reply({error:'公司不存在'},404);}
  if(path==='/admin/news-attempts'&&req.method==='POST'){const b=await req.json();if(!validStockCode(b.code)||!['success','empty','failed'].includes(b.status)||!await sql('SELECT code FROM companies WHERE code=?',b.code).first())return reply({error:'Invalid attempt'},400);await recordNewsAttempt(sql,{code:b.code,jobId:b.job_id||null,stage:'collector',status:b.status,details:b.details});return reply({ok:true});}
+ if(path==='/admin/news-triggers')return reply({triggers:await collectionTriggers(sql,url.searchParams.get('job_id'))});
  if(path==='/admin/tracked')return reply({companies:(await sql('SELECT DISTINCT c.* FROM companies c JOIN watchlists w ON c.code=w.company_code').all()).results});
  if(path==='/admin/claim'&&req.method==='POST'){
  await sql("UPDATE jobs SET status='pending' WHERE status='running' AND claimed_at<?",Date.now()-20*60000).run();
@@ -314,12 +316,16 @@ export default {async fetch(req,env){
  if(path==='/device-collect'){if(!validStockCode(code)||!await sql('SELECT code FROM companies WHERE code=?',code).first())return reply({error:'公司不存在'},404);}
  else if(!await sql('SELECT 1 FROM watchlists WHERE user_id=? AND company_code=?',user.id,code).first())return reply({error:'尚未追蹤此公司'},403);
  const retryAI=b.retry_ai===true&&news?.summary_method!=='ai';if(news?.article_summary&&!retryAI)return reply({news});
+ const audit=type==='collect'?{id:randomToken(),actor:(await hash('news-trigger:'+user.id)).slice(0,16),source:path==='/device-collect'?'device-fallback':'user-update',code}:null;
+ const recordTrigger=async job=>{if(audit)await recordCollectionTrigger(sql,{...audit,jobId:job.id,status:job.status||'pending'});};
+ const dispatchCollection=()=>dispatch(env,'news.yml',audit?{mode:'queued',request_id:audit.id,request_actor:audit.actor,request_code:audit.code,request_source:audit.source}:undefined);
  const existing=await sql("SELECT * FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND status IN ('pending','running') ORDER BY created_at DESC LIMIT 1",type,code,news?.id||null).first();
- if(existing){let dispatched,dispatchError;if(existing.status==='pending'){dispatched=false;try{dispatched=await dispatch(env);}catch(e){dispatchError=e.message||'GitHub 連線失敗';}}if(type==='collect'&&dispatched!==undefined)await recordNewsAttempt(sql,{code,jobId:existing.id,stage:'queue',status:dispatched?'queued':'failed',details:{error:dispatchError||(!dispatched?'GitHub Actions 未啟動':'')}});return reply({job:existing,news,dispatched,dispatchError},202);}
- const recent=await sql("SELECT * FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND created_at>? ORDER BY created_at DESC LIMIT 1",type,code,news?.id||null,Date.now()-15*60000).first();if(recent?.status==='done'&&!retryAI&&(type!=='collect'||(await newsAttempts(sql,{jobId:recent.id})).length))return reply({job:recent,news},202);
+ if(existing){await recordTrigger(existing);let dispatched,dispatchError;if(existing.status==='pending'){dispatched=false;try{dispatched=await dispatchCollection();}catch(e){dispatchError=e.message||'GitHub 連線失敗';}}if(type==='collect'&&dispatched!==undefined)await recordNewsAttempt(sql,{code,jobId:existing.id,stage:'queue',status:dispatched?'queued':'failed',details:{error:dispatchError||(!dispatched?'GitHub Actions 未啟動':'')}});return reply({job:existing,news,dispatched,dispatchError},202);}
+ const recent=await sql("SELECT * FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND created_at>? ORDER BY created_at DESC LIMIT 1",type,code,news?.id||null,Date.now()-15*60000).first();if(recent?.status==='done'&&!retryAI&&(type!=='collect'||(await newsAttempts(sql,{jobId:recent.id})).length)){await recordTrigger(recent);return reply({job:recent,news},202);}
  const id=randomToken();await sql('INSERT OR IGNORE INTO jobs(id,type,company_code,news_id,created_at) VALUES(?,?,?,?,?)',id,type,code,news?.id||null,Date.now()).run();
  const queued=await sql("SELECT id,status FROM jobs WHERE type=? AND company_code=? AND news_id IS ? AND status IN ('pending','running') LIMIT 1",type,code,news?.id||null).first();
- let dispatched=false,dispatchError;try{dispatched=await dispatch(env);}catch(e){dispatchError=e.message||'GitHub 連線失敗';}if(type==='collect')await recordNewsAttempt(sql,{code,jobId:queued.id,stage:'queue',status:dispatched?'queued':'failed',details:{error:dispatchError||(!dispatched?'GitHub Actions 未啟動':'')}});return reply({job:queued,news,dispatched,dispatchError},202);
+ await recordTrigger(queued);
+ let dispatched=false,dispatchError;try{dispatched=await dispatchCollection();}catch(e){dispatchError=e.message||'GitHub 連線失敗';}if(type==='collect')await recordNewsAttempt(sql,{code,jobId:queued.id,stage:'queue',status:dispatched?'queued':'failed',details:{error:dispatchError||(!dispatched?'GitHub Actions 未啟動':'')}});return reply({job:queued,news,dispatched,dispatchError},202);
  }
  if(path==='/jobs'){const j=await sql('SELECT j.* FROM jobs j JOIN watchlists w ON w.company_code=j.company_code WHERE j.id=? AND w.user_id=?',url.searchParams.get('id'),user.id).first();if(!j)return reply({error:'Job not found'},404);return reply({job:j,attempt:j.type==='collect'?(await newsAttempts(sql,{jobId:j.id}))[0]||null:null,news:j.news_id?await sql('SELECT * FROM news WHERE id=?',j.news_id).first():undefined});}
  return reply({error:'Not found'},404);

@@ -178,6 +178,11 @@ def save_attempt(code,details,job_id=None,failed=False):
  status='failed' if failed else 'success' if details.get('collected',0)>0 else 'empty'
  print('News attempt',code,status,json.dumps(details,ensure_ascii=False),flush=True)
  api('/admin/news-attempts',{'code':code,'job_id':job_id,'status':status,'details':details})
+try:
+ from news_action_audit import record_job
+except ModuleNotFoundError:
+ from scripts.news_action_audit import record_job
+
 def main():
  companies=api('/admin/tracked')['companies'];lookup={c['code']:c for c in companies};failed=[]
  if os.environ.get('RUN_MODE','daily')=='daily':
@@ -203,7 +208,9 @@ def main():
     else:
      news=api('/admin/article?id='+str(job['news_id']))['news']
      if news and (not news['article_summary'] or news.get('summary_method')!='ai'):summarize(news)
-   except CollectorQuotaError:raise
+   except CollectorQuotaError as e:
+    if job['type']=='collect':record_job(job,details,str(e),None)
+    raise
    except Exception as e:
     error=collection_error(e) if job['type']=='collect' else str(e) if isinstance(e,ValueError) else '新聞來源或摘要服務暫時無法讀取'
     if job['type']=='summarize':api('/admin/summary',{'id':job['news_id'],'summary_error':error})
@@ -211,6 +218,13 @@ def main():
      details['error']=error;save_attempt(job['company_code'],details,job['id'],failed=True)
      api('/admin/company',{'code':job['company_code'],'error':error})
    api('/admin/job',{'id':job['id'],'error':error})
+   if job['type']=='collect':
+    try:triggers=api('/admin/news-triggers?job_id='+job['id']).get('triggers',[])
+    except CollectorQuotaError:
+     record_job(job,details,error,None);raise
+    except Exception:
+     print('News trigger audit unavailable for job '+job['id'],flush=True);triggers=None
+    record_job(job,details,error,triggers)
  if failed:raise SystemExit('Failed companies: '+','.join(failed))
 if __name__=='__main__':
  try:main()
