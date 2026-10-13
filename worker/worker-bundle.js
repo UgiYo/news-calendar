@@ -1333,9 +1333,12 @@ async function summaryCacheRoute(req, { sql, reply, user, randomToken: randomTok
 
 // worker/management.js
 var FEATURE_TREE = [
+  { key: "markets", label: "\u80A1\u7968\u5E02\u5834\u986F\u793A", children: [{ key: "markets.tw", label: "\u53F0\u80A1\u5E02\u5834\uFF08\u641C\u5C0B\u3001\u8FFD\u8E64\u8207\u5E02\u5834\u9801\u9762\uFF09" }, { key: "markets.us", label: "\u7F8E\u80A1\u5E02\u5834\uFF08\u641C\u5C0B\u3001\u8FFD\u8E64\u8207\u5E02\u5834\u9801\u9762\uFF09" }] },
   { key: "news_calendar", label: "\u65B0\u805E\u6708\u66C6", children: [
     { key: "news_calendar.news", label: "\u65B0\u805E\u8207\u65E5\u671F\u6458\u8981" },
-    { key: "news_calendar.podcast", label: "Podcast \u65E5\u66C6\u8207\u63D0\u53CA\u8FFD\u8E64\u80A1" }
+    { key: "news_calendar.podcast", label: "Podcast \u65E5\u66C6\u8207\u63D0\u53CA\u8FFD\u8E64\u80A1" },
+    { key: "news_calendar.collect", label: "\u624B\u52D5\u66F4\u65B0\u65B0\u805E" },
+    { key: "news_calendar.podcast_import", label: "\u532F\u5165 Podcast \u983B\u9053" }
   ] },
   { key: "market_watch", label: "\u5E02\u5834\u89C0\u5BDF", children: [
     { key: "market_watch.turnover", label: "\u6210\u4EA4\u503C\u6392\u884C\u8207\u7522\u696D\u8DA8\u52E2" },
@@ -1344,13 +1347,18 @@ var FEATURE_TREE = [
   ] },
   { key: "stock_tools", label: "\u500B\u80A1\u5DE5\u5177", children: [
     { key: "stock_tools.candles", label: "K \u7DDA" },
-    { key: "stock_tools.broker_reports", label: "\u5238\u5546\u5831\u544A" }
+    { key: "stock_tools.broker_reports", label: "\u5238\u5546\u5831\u544A" },
+    { key: "stock_tools.holdings", label: "\u5238\u5546\u5EAB\u5B58" },
+    { key: "stock_tools.company_profile", label: "\u516C\u53F8\u8CA1\u52D9\u53C3\u8003" }
   ] },
   { key: "ai_tools", label: "AI \u5DE5\u5177", children: [
     { key: "ai_tools.assistant", label: "AI \u5C0F\u52A9\u624B" },
-    { key: "ai_tools.results", label: "AI \u6210\u679C\u4E2D\u5FC3\u8207\u901A\u77E5" }
+    { key: "ai_tools.results", label: "AI \u6210\u679C\u4E2D\u5FC3\u8207\u901A\u77E5" },
+    { key: "ai_tools.settings", label: "AI \u8A2D\u5B9A\u5165\u53E3" }
   ] }
 ];
+var FEATURE_DESCRIPTIONS = { "markets.tw": "\u53F0\u80A1\u641C\u5C0B\u3001\u8FFD\u8E64\u6E05\u55AE\u53CA\u5E02\u5834\u5207\u63DB\uFF1B\u95DC\u9589\u5F8C\u53EF\u81EA\u52D5\u5207\u81F3\u7F8E\u80A1\u3002", "markets.us": "\u7F8E\u80A1\u641C\u5C0B\u3001\u8FFD\u8E64\u6E05\u55AE\u53CA\u5E02\u5834\u5207\u63DB\uFF1B\u95DC\u9589\u5F8C\u53EF\u81EA\u52D5\u5207\u81F3\u53F0\u80A1\u3002", "news_calendar.news": "\u80A1\u7968\u65B0\u805E\u3001\u65E5\u671F\u65B0\u805E\u8207\u6458\u8981\u5165\u53E3\uFF1B\u4E0D\u9023\u5E36\u96B1\u85CF Podcast \u65E5\u66C6\u3002", "news_calendar.podcast": "Podcast \u65E5\u66C6\u3001\u983B\u9053\u7BE9\u9078\u3001\u63D0\u53CA\u8FFD\u8E64\u80A1\u8207\u7BC0\u76EE\u5165\u53E3\u3002", "news_calendar.collect": "\u7ACB\u5373\u66F4\u65B0\u65B0\u805E\u6309\u9215\uFF1B\u4E0D\u4FEE\u6539\u6BCF\u65E5\u6536\u96C6\u6392\u7A0B\u3002", "news_calendar.podcast_import": "\u532F\u5165 Podcast \u983B\u9053\u5165\u53E3\uFF1B\u5DF2\u532F\u5165\u7BC0\u76EE\u4FDD\u7559\u3002", "market_watch.turnover": "\u53F0\u80A1\u6210\u4EA4\u503C\u6392\u884C\u9801\u9762\u8207\u7522\u696D\u8DA8\u52E2\uFF1B\u7F8E\u80A1\u4E0D\u63D0\u4F9B\u6B64\u6392\u884C\u3002", "market_watch.observation": "\u512A\u5148\u89C0\u5BDF\u80A1\u8207\u50F9\u503C\u93C8\u756B\u9762\u3002", "market_watch.stock_events": "\u500B\u80A1\u7570\u52D5\u8FFD\u67E5\u5340\u584A\u3002", "stock_tools.candles": "K \u7DDA\u5165\u53E3\uFF0C\u6DB5\u84CB\u5747\u7DDA\u3001\u65B9\u5411\u7BAD\u982D\u8207\u652F\u6490\u58D3\u529B\u3002", "stock_tools.broker_reports": "\u516C\u958B\u5238\u5546\u5831\u544A\uFF1B\u8207\u5238\u5546\u5EAB\u5B58\u5206\u958B\u63A7\u5236\u3002", "stock_tools.holdings": "\u5238\u5546\u5EAB\u5B58\u532F\u5165\uFF0F\u6AA2\u8996\u5165\u53E3\uFF1B\u4E0D\u522A\u9664\u88DD\u7F6E\u5EAB\u5B58\u3002", "stock_tools.company_profile": "\u516C\u53F8\u8CA1\u52D9\u53C3\u8003\u5340\u584A\u53CA\u5176\u5206\u6790\u6309\u9215\u3002", "ai_tools.assistant": "\u6D6E\u52D5 AI \u5C0F\u52A9\u624B\u8207\u5C0D\u8A71\u5165\u53E3\u3002", "ai_tools.results": "AI \u6210\u679C\u4E2D\u5FC3\u53CA\u901A\u77E5\u5165\u53E3\uFF1B\u65E2\u6709\u6210\u679C\u4FDD\u7559\u3002", "ai_tools.settings": "AI \u8A2D\u5B9A\u5165\u53E3\uFF1B\u4E0D\u66F4\u52D5\u4F7F\u7528\u8005 API \u91D1\u9470\u6216\u6A21\u578B\u3002" };
+for (const parent of FEATURE_TREE) for (const child of parent.children) child.description = FEATURE_DESCRIPTIONS[child.key];
 var ALL_KEYS = FEATURE_TREE.flatMap((x) => [x.key, ...x.children.map((y) => y.key)]);
 var tokenOf = (req) => (req.headers.get("Authorization") || "").replace(/^Bearer /, "").trim();
 async function managementRoute(req, env, { sql, reply, randomToken: randomToken2, user }) {
