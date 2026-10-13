@@ -23,7 +23,7 @@ class DeviceCollectorTests(unittest.TestCase):
   def collect(c,details):
    self.assertEqual(c,company);details.update(requests=1,feed_items=2,collected=0,http_status=200)
    if fail:details['http_status']=429;raise fail
-  with patch.object(self.module,'api',side_effect=api),patch.object(self.module,'collect',side_effect=collect) as fn,patch.dict(os.environ,{'RUN_MODE':'queued'}):self.module.main()
+  with patch.object(self.module,'api',side_effect=api),patch.object(self.module,'collect',side_effect=collect) as fn,patch.dict(os.environ,{'RUN_MODE':'queued','GITHUB_STEP_SUMMARY':''}):self.module.main()
   return calls,fn
  def test_local_only_company_is_collected_and_zero_result_is_recorded(self):
   calls,fn=self.run_job({'code':'6515','name':'穎崴'});fn.assert_called_once()
