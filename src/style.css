@@ -195,3 +195,18 @@ aside>.podcast-controls{margin-top:24px;padding-top:16px;border-top:1px solid va
 .calendar-date-picker-trigger{white-space:nowrap}.calendar-date-picker{width:min(380px,calc(100vw - 24px));max-height:90vh;overflow:auto;padding:18px;border:1px solid var(--theme-border,#d6e0e8);border-radius:14px;background:var(--theme-surface,white);color:var(--theme-text,#163047)}.calendar-date-picker::backdrop{background:#0007}.date-picker-heading,.date-picker-navigation{display:flex;align-items:center;justify-content:space-between;gap:6px}.date-picker-heading h2{margin:0}.date-picker-heading{margin-bottom:16px}.date-picker-navigation button{white-space:nowrap;padding:8px}.date-picker-weekdays,.date-picker-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}.date-picker-weekdays{margin:14px 0 8px;color:var(--theme-text-secondary,#647b8b);font-size:13px}.date-picker-days button{padding:10px 0;border:0}.date-picker-days .outside-month{opacity:.45}.date-picker-days [aria-current=date],.date-picker-options [aria-pressed=true]{background:var(--theme-accent,#0e777e);color:white}.date-picker-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}.date-picker-hint{font-size:12px;line-height:1.6;color:var(--theme-text-secondary,#647b8b);margin:14px 0 0}
 
 .ma-direction{font-weight:800;font-size:1.1em}.ma-direction-up{color:var(--theme-price-up,#ca4444)}.ma-direction-down{color:var(--theme-price-down,#17875b)}.ma-direction-flat{color:var(--theme-text-secondary,#647b8b)}
+
+/* Keep custom MA periods high in the panel and MA values beside the chart. */
+.candle-panel .ma-controls{margin:8px 0;padding:8px 10px}
+.ma-controls .ma-controls-row,.ma-custom-periods,.ma-period-toggles{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ma-controls .ma-controls-row{gap:8px 16px}
+.ma-controls .ma-custom-periods{flex:0 1 auto;min-width:0}
+.ma-controls .ma-period-toggles{flex:1 1 auto}
+.ma-controls .ma-custom-periods label{margin:0;white-space:nowrap}
+.ma-controls .ma-custom-periods #ma-periods{display:inline-block;flex:1 1 130px;width:160px;max-width:190px;min-width:0;margin:0}
+.ma-controls .ma-period-toggles label{margin:0;white-space:nowrap}
+.ma-controls #ma-status:empty{display:none}
+.candle-panel .candle-quote{gap:6px;margin:10px 0 6px}
+.candle-panel .candle-ma-values{flex-direction:row;flex-wrap:wrap;gap:6px 16px}
+.candle-panel .candle-ma-values>span{white-space:nowrap}
+@media(max-width:600px){.ma-controls .ma-custom-periods{flex:1 1 100%}.ma-controls .ma-period-toggles{flex-basis:100%}.candle-panel .candle-ma-values{gap:6px 12px}}
