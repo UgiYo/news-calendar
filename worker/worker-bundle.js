@@ -875,6 +875,24 @@ async function accountResultsRoute(req, { sql, reply, user, db }) {
   return reply({ ok: true });
 }
 
+// shared/spotify-feeds.js
+var shows = {
+  "6SjGs5mgZ4IAo82tHygxD2": { title: "\u5C0F\u670B\u53CB\u5B78\u6295\u8CC7", author: "\u5C0F\u670B\u53CB\u5718\u968A", feed: "https://feed.firstory.me/rss/user/ckgt1mz641n230804jvx96k4m" },
+  "1HOGxT9M7a6kpcDi4q27Q7": { title: "\u6E38\u5EAD\u7693\u7684\u8CA1\u7D93\u7693\u89D2", author: "\u6E38\u5EAD\u7693\u7684\u8CA1\u7D93\u7693\u89D2", feed: "https://feeds.soundcloud.com/users/soundcloud:users:735679489/sounds.rss" }
+};
+function spotifyShowURL(value) {
+  const u = new URL(String(value || ""));
+  if (u.protocol !== "https:" || u.hostname !== "open.spotify.com" || u.username || u.password || u.port || !/^\/(?:intl-[a-z]+\/)?show\/[A-Za-z0-9]{22}\/?$/.test(u.pathname)) throw Error("\u8ACB\u8CBC\u4E0A Spotify \u7BC0\u76EE\u9023\u7D50\uFF08show\uFF09\uFF0C\u4E0D\u662F\u55AE\u96C6\u9023\u7D50\u3002");
+  return "https://open.spotify.com/show/" + u.pathname.split("/").filter(Boolean).at(-1);
+}
+function verifiedSpotifyFeed(value) {
+  try {
+    return shows[spotifyShowURL(value).split("/").at(-1)] || null;
+  } catch {
+    return null;
+  }
+}
+
 // worker/podcasts.js
 var fields3 = ["id", "title", "published_at", "date", "url", "audio_url", "description", "duration", "transcript_url"];
 function podcastFeed(value) {
@@ -899,10 +917,8 @@ function payload(data, id, feed) {
   return result;
 }
 async function resolveSpotifyPodcast(value, fetcher = globalThis.fetch) {
-  const u = new URL(String(value || ""));
-  if (u.protocol !== "https:" || u.hostname !== "open.spotify.com" || u.username || u.password || u.port || !/^\/(?:intl-[a-z]+\/)?show\/[A-Za-z0-9]{22}\/?$/.test(u.pathname)) throw Error("\u8ACB\u8CBC\u4E0A Spotify \u7BC0\u76EE\u9023\u7D50\uFF08show\uFF09\uFF0C\u4E0D\u662F\u55AE\u96C6\u9023\u7D50\u3002");
-  const show = u.pathname.split("/").filter(Boolean).at(-1), url = "https://open.spotify.com/show/" + show;
-  if (show === "6SjGs5mgZ4IAo82tHygxD2") return { title: "\u5C0F\u670B\u53CB\u5B78\u6295\u8CC7", candidates: [{ title: "\u5C0F\u670B\u53CB\u5B78\u6295\u8CC7", author: "\u5C0F\u670B\u53CB\u5718\u968A", feed: "https://feed.firstory.me/rss/user/ckgt1mz641n230804jvx96k4m" }] };
+  const url = spotifyShowURL(value), known = verifiedSpotifyFeed(url);
+  if (known) return { title: known.title, candidates: [known] };
   const read = async (endpoint) => {
     for (let attempt = 0; attempt < 4; attempt++) {
       const r = await fetcher(endpoint, { redirect: "manual", signal: AbortSignal.timeout(1e4), headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" } });
@@ -912,7 +928,7 @@ async function resolveSpotifyPodcast(value, fetcher = globalThis.fetch) {
         endpoint = next.href;
         continue;
       }
-      if (!r.ok) throw Error("Podcast \u76EE\u9304\u641C\u5C0B\u5931\u6557\uFF08HTTP " + r.status + "\uFF09\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002");
+      if (!r.ok) throw Error(r.status === 429 ? "Podcast \u76EE\u9304\u641C\u5C0B\u76EE\u524D\u9650\u6D41\uFF08HTTP 429\uFF09\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\uFF0C\u6216\u76F4\u63A5\u8CBC\u4E0A\u7BC0\u76EE\u7684\u516C\u958B RSS \u7DB2\u5740\u3002" : "Podcast \u76EE\u9304\u641C\u5C0B\u5931\u6557\uFF08HTTP " + r.status + "\uFF09\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002");
       return r.json();
     }
     throw Error("Podcast \u76EE\u9304\u8F49\u5740\u6B21\u6578\u904E\u591A\u3002");
@@ -948,7 +964,12 @@ async function sharedPodcastsRoute(req, { sql, reply, user, admin = false, hash:
   if (path === "/podcasts/resolve") {
     if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
     try {
-      return reply(await resolveSpotifyPodcast((await req.json()).url));
+      const canonical = spotifyShowURL((await req.json()).url), cache = globalThis.caches?.default, key = new Request(u.origin + "/cache/podcasts/resolve/" + canonical.split("/").at(-1));
+      const cached = await cache?.match(key);
+      if (cached) return reply(await cached.json());
+      const result = await resolveSpotifyPodcast(canonical);
+      if (cache && result.candidates.length) await cache.put(key, Response.json(result, { headers: { "Cache-Control": "public, max-age=86400" } }));
+      return reply(result);
     } catch (e) {
       return reply({ error: e.message }, 400);
     }
