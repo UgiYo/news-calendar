@@ -4,6 +4,8 @@
 
 ## 架構
 
+完整技術、前後端服務與資料流請見 [系統架構圖](docs/architecture.md)（含 SVG／PNG 圖片與可編輯 Mermaid 原始碼）。
+
 - GitHub Pages：靜態前端。
 - Cloudflare Workers：Google OAuth、30 天登入 session、公司搜尋、追蹤清單、新聞 API、工作排隊。
 - D1：公司、使用者、session、追蹤清單、新聞、摘要與工作狀態。
