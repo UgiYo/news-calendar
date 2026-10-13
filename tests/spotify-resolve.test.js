@@ -19,3 +19,16 @@ test('Spotify redirects are rejected before following another host',async()=>{
 
 test('Verified user show resolves during directory outages',async()=>{const result=await resolveSpotifyPodcast('https://open.spotify.com/show/6SjGs5mgZ4IAo82tHygxD2?si=copy',()=>{throw Error('offline');});assert.equal(result.candidates[0].author,'小朋友團隊');assert.match(result.candidates[0].feed,/feed.firstory.me/);});
 test('Directory redirect stays on official host and returns candidates',async()=>{let count=0;const result=await resolveSpotifyPodcast('https://open.spotify.com/show/1234567890123456789012',async()=>{count++;if(count===1)return new Response('<meta property="og:title" content="測試節目"/>');if(count===2)return new Response(null,{status:301,headers:{Location:'https://itunes.apple.com/search?term=test'}});return Response.json({results:[{collectionName:'測試節目',feedUrl:'https://example.com/feed'}]});});assert.equal(count,3);assert.equal(result.candidates.length,1);});
+test('verified financial show resolves with copy-link parameters without directory requests',async()=>{
+ const result=await resolveSpotifyPodcast('https://open.spotify.com/show/1HOGxT9M7a6kpcDi4q27Q7?si=copy&utm_source=copy-link',()=>{throw Error('directory HTTP 429');});
+ assert.equal(result.title,'游庭皓的財經皓角');assert.equal(result.candidates[0].feed,'https://feeds.soundcloud.com/users/soundcloud:users:735679489/sounds.rss');
+});
+test('unknown show directory rate limit offers RSS import without retrying in a loop',async()=>{
+ let calls=0;await assert.rejects(resolveSpotifyPodcast('https://open.spotify.com/show/1234567890123456789012',async()=>++calls===1?new Response('<meta property="og:title" content="測試節目"/>'):new Response('limited',{status:429})),/HTTP 429.*RSS/);assert.equal(calls,2);
+});
+test('resolver caches successful show candidates across tracking URLs and still requires login',async()=>{
+ const {sharedPodcastsRoute}=await import('../worker/podcasts.js');const original=globalThis.caches,rows=new Map();let reads=0,writes=0;
+ globalThis.caches={default:{match:async key=>{reads++;return rows.get(key.url)?.clone();},put:async(key,response)=>{writes++;assert.equal(response.headers.get('Cache-Control'),'public, max-age=86400');rows.set(key.url,response);}}};
+ const call=async(url,user={id:'one'})=>sharedPodcastsRoute(new Request('https://api.example/podcasts/resolve',{method:'POST',body:JSON.stringify({url})}),{user,reply:data=>Response.json(data)});
+ try{const show='https://open.spotify.com/show/1HOGxT9M7a6kpcDi4q27Q7';assert.equal((await (await call(show+'?si=a')).json()).candidates.length,1);await call(show+'?si=b');assert.equal(writes,1);assert.equal(reads,2);assert.equal((await (await call(show,null)).json()).error,'請先登入');assert.equal(reads,2);}finally{if(original===undefined)delete globalThis.caches;else globalThis.caches=original;}
+});
