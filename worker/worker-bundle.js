@@ -381,14 +381,14 @@ function newsQuery(c, range = "when:1m") {
 }
 
 // src/news-policy.js
-function companyMention(title, company, conflicts = []) {
-  if (isUS(company.code)) return usMention(title, company);
+function companyMention(title, company2, conflicts = []) {
+  if (isUS(company2.code)) return usMention(title, company2);
   const text = String(title || "").normalize("NFKC");
-  if (new RegExp("(?<!\\d)" + company.code + "(?!\\d)").test(text)) return true;
+  if (new RegExp("(?<!\\d)" + company2.code + "(?!\\d)").test(text)) return true;
   let cleaned = text;
-  const names = [...conflicts, ...company.code === "2303" ? ["\u53F0\u806F\u96FB"] : []];
-  for (const name of [...new Set(names)].sort((a, b) => b.length - a.length)) if (name && name !== company.name) cleaned = cleaned.split(name).join(" ");
-  return [company.name, company.full_name].filter((n) => n && n.length >= 2).some((n) => cleaned.includes(n));
+  const names = [...conflicts, ...company2.code === "2303" ? ["\u53F0\u806F\u96FB"] : []];
+  for (const name of [...new Set(names)].sort((a, b) => b.length - a.length)) if (name && name !== company2.name) cleaned = cleaned.split(name).join(" ");
+  return [company2.name, company2.full_name].filter((n) => n && n.length >= 2).some((n) => cleaned.includes(n));
 }
 function trustedSource(source) {
   const key = String(source || "").normalize("NFKC").replace(/\s/g, "").toLowerCase();
@@ -550,8 +550,8 @@ async function saveUSPrices(sql, db, rows, source = "Yahoo Finance") {
     sql("INSERT INTO us_price_facts(code,date,adjusted_close,source,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(code,date) DO UPDATE SET adjusted_close=excluded.adjusted_close,source=excluded.source,updated_at=excluded.updated_at", p.code, p.date, p.adjusted_close ?? null, source, at)
   ]));
 }
-async function fetchUSFilings(company, env, fetcher = fetch) {
-  const c = company.cik ? company : (await usCatalog(env, fetcher)).find((c2) => c2.code === company.code);
+async function fetchUSFilings(company2, env, fetcher = fetch) {
+  const c = company2.cik ? company2 : (await usCatalog(env, fetcher)).find((c2) => c2.code === company2.code);
   if (!c?.cik) return [];
   const r = await fetcher(`https://data.sec.gov/submissions/CIK${c.cik}.json`, { headers: secHeaders(env), signal: AbortSignal.timeout(1e4) });
   if (!r.ok) throw Error("SEC \u516C\u544A HTTP " + r.status);
@@ -561,7 +561,7 @@ async function fetchUSFilings(company, env, fetcher = fetch) {
   return (recent.accessionNumber || []).flatMap((n, i) => {
     const form = recent.form?.[i], date = recent.filingDate?.[i], document = recent.primaryDocument?.[i];
     if (!["10-K", "10-Q", "8-K", "20-F", "6-K"].includes(form) || !/^\d{4}-\d{2}-\d{2}$/.test(date || "") || !document) return [];
-    return [{ company_code: company.code, title: `${company.name} \xB7 ${form} \u516C\u53F8\u7533\u5831`, source: "SEC EDGAR", news_date: date, published_at: recent.acceptanceDateTime?.[i] || null, url: `https://www.sec.gov/Archives/edgar/data/${Number(c.cik)}/${n.replaceAll("-", "")}/${encodeURIComponent(document)}`, form, evidence_kind: "filing_metadata" }];
+    return [{ company_code: company2.code, title: `${company2.name} \xB7 ${form} \u516C\u53F8\u7533\u5831`, source: "SEC EDGAR", news_date: date, published_at: recent.acceptanceDateTime?.[i] || null, url: `https://www.sec.gov/Archives/edgar/data/${Number(c.cik)}/${n.replaceAll("-", "")}/${encodeURIComponent(document)}`, form, evidence_kind: "filing_metadata" }];
   }).slice(0, 40);
 }
 async function usMarketRoute(req, env, { sql, reply, user, parsePreview: parsePreview2, fetcher = fetch }) {
@@ -576,15 +576,15 @@ async function usMarketRoute(req, env, { sql, reply, user, parsePreview: parsePr
   }
   if (!isUS(code)) return null;
   if (!user?.id) return reply({ error: "\u8ACB\u5148\u767B\u5165" }, 401);
-  const company = enrichCompany(await sql("SELECT * FROM companies WHERE code=?", code).first());
-  if (!company) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728\uFF0C\u8ACB\u5148\u641C\u5C0B\u4E26\u8FFD\u8E64" }, 404);
-  if (path === "/ranking-stock") return reply({ stock: company, history: [], market: "US" });
-  if (path === "/company-profile") return reply({ profile: { code, heading: symbolOf(code) + " " + company.name, introduction: company.full_name, metrics: [{ label: "\u4EA4\u6613\u5E02\u5834", value: company.exchange || "\u7F8E\u80A1" }, { label: "\u8A08\u50F9\u5E63\u5225", value: "USD" }], source: "\u516C\u53F8\u8B58\u5225\u8CC7\u6599", url: "https://www.sec.gov/edgar/search/#/q=" + encodeURIComponent(company.full_name), fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), notice: "\u7F8E\u80A1\u516C\u53F8\u7533\u5831\u53EF\u5728\u4E0B\u65B9 SEC \u516C\u544A\u67E5\u770B\uFF1B\u6B64\u8655\u672A\u63D0\u4F9B\u8CA1\u52D9\u6BD4\u7387\u3002" } });
+  const company2 = enrichCompany(await sql("SELECT * FROM companies WHERE code=?", code).first());
+  if (!company2) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728\uFF0C\u8ACB\u5148\u641C\u5C0B\u4E26\u8FFD\u8E64" }, 404);
+  if (path === "/ranking-stock") return reply({ stock: company2, history: [], market: "US" });
+  if (path === "/company-profile") return reply({ profile: { code, heading: symbolOf(code) + " " + company2.name, introduction: company2.full_name, metrics: [{ label: "\u4EA4\u6613\u5E02\u5834", value: company2.exchange || "\u7F8E\u80A1" }, { label: "\u8A08\u50F9\u5E63\u5225", value: "USD" }], source: "\u516C\u53F8\u8B58\u5225\u8CC7\u6599", url: "https://www.sec.gov/edgar/search/#/q=" + encodeURIComponent(company2.full_name), fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), notice: "\u7F8E\u80A1\u516C\u53F8\u7533\u5831\u53EF\u5728\u4E0B\u65B9 SEC \u516C\u544A\u67E5\u770B\uFF1B\u6B64\u8655\u672A\u63D0\u4F9B\u8CA1\u52D9\u6BD4\u7387\u3002" } });
   if (path === "/us-filings") {
     try {
-      return reply({ company, filings: await fetchUSFilings(company, env, fetcher) });
+      return reply({ company: company2, filings: await fetchUSFilings(company2, env, fetcher) });
     } catch (e) {
-      return reply({ company, filings: [], warning: e.message });
+      return reply({ company: company2, filings: [], warning: e.message });
     }
   }
   if (path === "/intraday") return reply({ error: "\u7F8E\u80A1\u7B2C\u4E00\u7248\u63D0\u4F9B\u6536\u76E4\u65E5\uFF0F\u9031\uFF0F\u6708 K\uFF0C\u5C1A\u672A\u63A5\u5165\u76E4\u4E2D\u884C\u60C5\u3002" }, 422);
@@ -603,13 +603,13 @@ async function usMarketRoute(req, env, { sql, reply, user, parsePreview: parsePr
   }
   if (path === "/preview") {
     if (req.method !== "GET") return reply({ error: "Method not allowed" }, 405);
-    if (url.searchParams.get("stored") === "1") return reply({ company, news: (await sql("SELECT * FROM news WHERE company_code=? AND published_at>=? ORDER BY published_at DESC,id DESC", code, new Date(Date.now() - 32 * 864e5).toISOString()).all()).results });
+    if (url.searchParams.get("stored") === "1") return reply({ company: company2, news: (await sql("SELECT * FROM news WHERE company_code=? AND published_at>=? ORDER BY published_at DESC,id DESC", code, new Date(Date.now() - 32 * 864e5).toISOString()).all()).results });
     const feed = new URL("https://news.google.com/rss/search");
-    feed.search = new URLSearchParams({ q: newsQuery(company), hl: "en-US", gl: "US", ceid: "US:en" }).toString();
+    feed.search = new URLSearchParams({ q: newsQuery(company2), hl: "en-US", gl: "US", ceid: "US:en" }).toString();
     try {
       const response = await fetcher(feed, { signal: AbortSignal.timeout(2e4) });
       if (!response.ok) throw Error("Google News RSS HTTP " + response.status);
-      return reply({ company, news: parsePreview2(await response.text(), company), timezone: "America/New_York" });
+      return reply({ company: company2, news: parsePreview2(await response.text(), company2), timezone: "America/New_York" });
     } catch (e) {
       await recordNewsAttempt(sql, { code, stage: "preview", status: "failed", details: { error: e.message } });
       return reply({ error: "\u7F8E\u80A1\u65B0\u805E\u4F86\u6E90\u66AB\u6642\u7121\u6CD5\u8B80\u53D6\uFF1A" + e.message, code: "NEWS_SOURCE_UNAVAILABLE" }, 502);
@@ -784,33 +784,33 @@ async function stockEventsRoute(req, { sql, reply, user, parsePreview: parsePrev
   }
   const code = url.searchParams.get("code"), lookback = Number(url.searchParams.get("lookback") || 45);
   if (!validStockCode(code) || ![30, 45].includes(lookback)) return reply({ error: "Invalid event range" }, 400);
-  const company = enrichCompany(await sql("SELECT * FROM companies WHERE code=?", code).first());
-  if (!company) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
+  const company2 = enrichCompany(await sql("SELECT * FROM companies WHERE code=?", code).first());
+  if (!company2) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
   const movement = detectMovement(await readPrices([code]), { code, date });
   if (!movement.from) return reply({ error: "\u884C\u60C5\u4E0D\u8DB3\uFF0C\u8ACB\u5148\u5728\u500B\u80A1\u8D70\u52E2\u66F4\u65B0\u65E5\u7DDA" }, 422);
   const range = newsWindow(movement, lookback), saved = (await sql("SELECT * FROM news WHERE company_code=? AND news_date BETWEEN ? AND ? ORDER BY published_at", code, range.from, range.to).all()).results;
-  const conflicts = (await sql("SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0", code, company.name, company.name).all()).results.map((r) => r.name), rows = [...saved], failures = [];
+  const conflicts = (await sql("SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0", code, company2.name, company2.name).all()).results.map((r) => r.name), rows = [...saved], failures = [];
   const chunks = [];
   for (let from = range.from; from <= range.to; from = shiftDay(from, 7)) chunks.push({ from, to: shiftDay(from, 6) < range.to ? shiftDay(from, 6) : range.to });
   for (let i = 0; i < chunks.length; i += 3) await Promise.all(chunks.slice(i, i + 3).map(async (chunk) => {
     try {
       const feed = new URL("https://news.google.com/rss/search");
-      feed.search = new URLSearchParams({ q: newsQuery(company, `after:${shiftDay(chunk.from, -1)} before:${shiftDay(chunk.to, 1)}`), hl: market === "US" ? "en-US" : "zh-TW", gl: market === "US" ? "US" : "TW", ceid: market === "US" ? "US:en" : "TW:zh-Hant" }).toString();
+      feed.search = new URLSearchParams({ q: newsQuery(company2, `after:${shiftDay(chunk.from, -1)} before:${shiftDay(chunk.to, 1)}`), hl: market === "US" ? "en-US" : "zh-TW", gl: market === "US" ? "US" : "TW", ceid: market === "US" ? "US:en" : "TW:zh-Hant" }).toString();
       const response = await fetcher(feed, { signal: AbortSignal.timeout(12e3) });
       if (!response.ok) throw Error("RSS " + response.status);
-      rows.push(...parsePreview2(await response.text(), company, /* @__PURE__ */ new Date(shiftDay(chunk.to, 1) + (market === "US" ? "T05:00:00Z" : "T00:00:00+08:00")), conflicts, /* @__PURE__ */ new Date(chunk.from + (market === "US" ? "T00:00:00Z" : "T00:00:00+08:00"))));
+      rows.push(...parsePreview2(await response.text(), company2, /* @__PURE__ */ new Date(shiftDay(chunk.to, 1) + (market === "US" ? "T05:00:00Z" : "T00:00:00+08:00")), conflicts, /* @__PURE__ */ new Date(chunk.from + (market === "US" ? "T00:00:00Z" : "T00:00:00+08:00"))));
     } catch (e) {
       failures.push(`${chunk.from}\uFF5E${chunk.to}\uFF1A${e.message}`);
     }
   }));
   let filings = [];
   if (market === "US") try {
-    filings = (await fetchUSFilings(company, env, fetcher)).filter((r) => r.news_date >= range.from && r.news_date <= range.to);
+    filings = (await fetchUSFilings(company2, env, fetcher)).filter((r) => r.news_date >= range.from && r.news_date <= range.to);
   } catch (e) {
     failures.push("SEC \u516C\u544A\uFF1A" + e.message);
   }
-  const news = [...curateNews2(rows.filter((r) => r.news_date >= range.from && r.news_date <= range.to && companyMention2(r.title, company, conflicts))), ...filings].sort((a, b) => String(a.published_at).localeCompare(String(b.published_at)));
-  return reply({ owner_id: user.id, company, movement, news, coverage: { ...range, lookback, searchSegments: chunks.length, failedSegments: failures.length, failures, count: news.length, first: news[0]?.news_date || null, last: news.at(-1)?.news_date || null, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), market, timezone: market === "US" ? "America/New_York" : "Asia/Taipei", complete: false, note: "\u5DF2\u4F9D\u65E5\u671F\u5340\u9593\u67E5\u8A62\uFF1B\u641C\u5C0B\u4F86\u6E90\u4E0D\u4FDD\u8B49\u5B8C\u6574\u6536\u9304\uFF0C\u6C92\u6709\u56DE\u50B3\u65B0\u805E\u4E0D\u4EE3\u8868\u7576\u5929\u6C92\u6709\u4E8B\u4EF6\u3002" } });
+  const news = [...curateNews2(rows.filter((r) => r.news_date >= range.from && r.news_date <= range.to && companyMention2(r.title, company2, conflicts))), ...filings].sort((a, b) => String(a.published_at).localeCompare(String(b.published_at)));
+  return reply({ owner_id: user.id, company: company2, movement, news, coverage: { ...range, lookback, searchSegments: chunks.length, failedSegments: failures.length, failures, count: news.length, first: news[0]?.news_date || null, last: news.at(-1)?.news_date || null, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), market, timezone: market === "US" ? "America/New_York" : "Asia/Taipei", complete: false, note: "\u5DF2\u4F9D\u65E5\u671F\u5340\u9593\u67E5\u8A62\uFF1B\u641C\u5C0B\u4F86\u6E90\u4E0D\u4FDD\u8B49\u5B8C\u6574\u6536\u9304\uFF0C\u6C92\u6709\u56DE\u50B3\u65B0\u805E\u4E0D\u4EE3\u8868\u7576\u5929\u6C92\u6709\u4E8B\u4EF6\u3002" } });
 }
 
 // worker/account-results.js
@@ -1331,6 +1331,121 @@ async function summaryCacheRoute(req, { sql, reply, user, randomToken: randomTok
   return row ? reply({ ok: true }) : reply({ error: "Cache lease expired" }, 409);
 }
 
+// shared/industry-topology.js
+var node = (id, chain, label, level, source) => ({ id, chain, label, level, source, enabled: true });
+var company = (code, name, nodes, source) => ({ code, name, nodes, source, enabled: true });
+var INITIAL_TOPOLOGY = {
+  chains: [{ id: "semiconductor", label: "\u534A\u5C0E\u9AD4", enabled: true }, { id: "ai-server", label: "AI \u4F3A\u670D\u5668", enabled: true }],
+  nodes: [
+    node("equipment", "semiconductor", "\u8A2D\u5099\u8207\u6750\u6599", 0, "https://ic.tpex.org.tw/"),
+    node("design", "semiconductor", "\u6676\u7247\u8A2D\u8A08", 0, "https://ic.tpex.org.tw/"),
+    node("foundry", "semiconductor", "\u6676\u5713\u88FD\u9020", 1, "https://ic.tpex.org.tw/"),
+    node("packaging", "semiconductor", "\u5C01\u88DD\u8207\u6E2C\u8A66", 2, "https://ic.tpex.org.tw/"),
+    node("chips", "ai-server", "\u904B\u7B97\u6676\u7247", 0, "https://ic.tpex.org.tw/"),
+    node("components", "ai-server", "\u96FB\u6E90\u8207\u96F6\u7D44\u4EF6", 0, "https://ic.tpex.org.tw/"),
+    node("assembly", "ai-server", "\u4F3A\u670D\u5668\u7D44\u88DD", 1, "https://ic.tpex.org.tw/"),
+    node("cloud", "ai-server", "\u96F2\u7AEF\u8207\u7D42\u7AEF\u61C9\u7528", 2, "https://ic.tpex.org.tw/")
+  ],
+  companies: [
+    company("2330", "\u53F0\u7A4D\u96FB", ["foundry"], "https://www.tsmc.com/"),
+    company("2303", "\u806F\u96FB", ["foundry"], "https://www.umc.com/"),
+    company("2454", "\u806F\u767C\u79D1", ["design"], "https://www.mediatek.com/"),
+    company("3711", "\u65E5\u6708\u5149\u6295\u63A7", ["packaging"], "https://www.aseglobal.com/"),
+    company("2308", "\u53F0\u9054\u96FB", ["components"], "https://www.deltaww.com/"),
+    company("2382", "\u5EE3\u9054", ["assembly"], "https://www.quantatw.com/"),
+    company("3231", "\u7DEF\u5275", ["assembly"], "https://www.wistron.com/"),
+    company("6669", "\u7DEF\u7A4E", ["assembly"], "https://www.wiwynn.com/"),
+    company("US:NVDA", "\u8F1D\u9054 NVIDIA", ["design", "chips"], "https://www.nvidia.com/"),
+    company("US:AMD", "AMD", ["design", "chips"], "https://www.amd.com/"),
+    company("US:AMAT", "Applied Materials", ["equipment"], "https://www.appliedmaterials.com/"),
+    company("US:ASML", "ASML", ["equipment"], "https://www.asml.com/"),
+    company("US:MU", "Micron", ["foundry", "components"], "https://www.micron.com/"),
+    company("US:DELL", "Dell", ["assembly"], "https://www.dell.com/"),
+    company("US:HPE", "HPE", ["assembly"], "https://www.hpe.com/"),
+    company("US:MSFT", "Microsoft", ["cloud"], "https://www.microsoft.com/"),
+    company("US:AMZN", "Amazon", ["cloud"], "https://aws.amazon.com/"),
+    company("US:GOOGL", "Alphabet", ["cloud"], "https://cloud.google.com/")
+  ],
+  relations: [["equipment", "foundry"], ["design", "foundry"], ["foundry", "packaging"], ["chips", "assembly"], ["components", "assembly"], ["assembly", "cloud"]].map(([from, to], i) => ({ id: "flow-" + i, from, to, type: "industry", label: "\u7522\u54C1\uFF0F\u670D\u52D9\u6D41\u5411", status: "reviewed", source: "https://ic.tpex.org.tw/", date: "2026-10-14", enabled: true }))
+};
+var RELATION_TYPES = { industry: "\u7522\u696D\u74B0\u7BC0", supplier: "\u4F9B\u61C9\uFF0F\u5BA2\u6236", partner: "\u5408\u4F5C", competitor: "\u7AF6\u722D" };
+var endpointCompany = (code) => "company:" + code;
+function safeTopologyURL(value) {
+  try {
+    const u = new URL(value);
+    return u.protocol === "https:" && !u.username && !u.password ? u.href : "";
+  } catch {
+    return "";
+  }
+}
+function validateTopology(doc) {
+  if (!doc || JSON.stringify(doc).length > 25e4) throw Error("\u8CC7\u6599\u904E\u5927\u6216\u683C\u5F0F\u932F\u8AA4");
+  for (const [key, max] of [["chains", 30], ["nodes", 300], ["companies", 1500], ["relations", 2500]]) if (!Array.isArray(doc[key]) || doc[key].length > max) throw Error(key + " \u683C\u5F0F\u932F\u8AA4\u6216\u8D85\u904E\u4E0A\u9650");
+  const text = (x, max = 200) => typeof x === "string" && x.trim().length > 0 && x.length <= max;
+  const id = (x) => text(x, 80) && /^[a-zA-Z0-9:_-]+$/.test(x);
+  const unique = (rows, key) => {
+    if (new Set(rows.map((r) => r[key])).size !== rows.length) throw Error("\u91CD\u8907 " + key);
+  };
+  for (const k of ["chains", "nodes", "relations"]) unique(doc[k], "id");
+  unique(doc.companies, "code");
+  const chains = new Set(doc.chains.map((c) => c.id)), nodes = new Set(doc.nodes.map((n) => n.id));
+  for (const c of doc.chains) if (!id(c.id) || !text(c.label) || typeof c.enabled !== "boolean") throw Error("\u7522\u696D\u93C8\u683C\u5F0F\u932F\u8AA4");
+  for (const n of doc.nodes) if (!id(n.id) || n.id.startsWith("company:") || !chains.has(n.chain) || !text(n.label) || !Number.isInteger(n.level) || n.level < 0 || n.level > 8 || typeof n.enabled !== "boolean" || !safeTopologyURL(n.source)) throw Error("\u7522\u696D\u7BC0\u9EDE\u6216\u4F86\u6E90\u683C\u5F0F\u932F\u8AA4");
+  for (const c of doc.companies) if (!/^(?:\d{4,6}|US:[A-Z][A-Z0-9.-]{0,14})$/.test(c.code) || !text(c.name) || !Array.isArray(c.nodes) || !c.nodes.length || new Set(c.nodes).size !== c.nodes.length || c.nodes.some((n) => !nodes.has(n)) || typeof c.enabled !== "boolean" || !safeTopologyURL(c.source)) throw Error("\u516C\u53F8\u3001\u6240\u5C6C\u74B0\u7BC0\u6216\u4F86\u6E90\u683C\u5F0F\u932F\u8AA4");
+  const endpoints = /* @__PURE__ */ new Set([...nodes, ...doc.companies.map((c) => endpointCompany(c.code))]);
+  for (const r of doc.relations) {
+    if (!id(r.id) || !endpoints.has(r.from) || !endpoints.has(r.to) || r.from === r.to || !Object.hasOwn(RELATION_TYPES, r.type) || !["reviewed", "pending"].includes(r.status) || !text(r.label) || typeof r.enabled !== "boolean" || !safeTopologyURL(r.source) || !/^\d{4}-\d{2}-\d{2}$/.test(r.date) || Number.isNaN(Date.parse(r.date)) || new Date(r.date).toISOString().slice(0, 10) !== r.date) throw Error("\u95DC\u4FC2\u3001\u4F86\u6E90\u6216\u65E5\u671F\u683C\u5F0F\u932F\u8AA4");
+    if (r.type === "industry" && (r.from.startsWith("company:") || r.to.startsWith("company:"))) throw Error("\u7522\u696D\u74B0\u7BC0\u95DC\u4FC2\u53EA\u80FD\u9023\u63A5\u7522\u696D\u7BC0\u9EDE");
+    if (r.type !== "industry" && (!r.from.startsWith("company:") || !r.to.startsWith("company:"))) throw Error("\u516C\u53F8\u95DC\u4FC2\u53EA\u80FD\u9023\u63A5\u516C\u53F8");
+  }
+  return Object.fromEntries(Object.entries({ chains: ["id", "label", "enabled"], nodes: ["id", "chain", "label", "level", "source", "enabled"], companies: ["code", "name", "nodes", "source", "enabled"], relations: ["id", "from", "to", "type", "label", "status", "source", "date", "enabled"] }).map(([key, fields4]) => [key, doc[key].map((row) => Object.fromEntries(fields4.map((f) => [f, row[f]])))]));
+}
+function publishedTopology(doc, flags = {}) {
+  if (flags["market_watch.topology"] === false) return { chains: [], nodes: [], companies: [], relations: [] };
+  const chains = doc.chains.filter((c) => c.enabled), chainIds = new Set(chains.map((c) => c.id));
+  const nodes = doc.nodes.filter((n) => n.enabled && chainIds.has(n.chain)), nodeIds = new Set(nodes.map((n) => n.id));
+  const companies = doc.companies.filter((c) => c.enabled && flags["markets." + (c.code.startsWith("US:") ? "us" : "tw")] !== false).map((c) => ({ ...c, nodes: c.nodes.filter((n) => nodeIds.has(n)) })).filter((c) => c.nodes.length);
+  const endpoints = /* @__PURE__ */ new Set([...nodeIds, ...companies.map((c) => endpointCompany(c.code))]);
+  const relations = doc.relations.filter((r) => r.enabled && endpoints.has(r.from) && endpoints.has(r.to) && (r.status === "reviewed" || flags["topology.pending"] !== false) && (r.type === "industry" || flags["topology.company_relations"] !== false));
+  return { chains, nodes, companies, relations };
+}
+
+// worker/industry-topology.js
+async function topologyRoute(req, { sql, reply, flags = {}, management = false }) {
+  const path = new URL(req.url).pathname;
+  if (management ? path !== "/management/topology" : !["/industry-topology", "/industry-topology/news"].includes(path)) return null;
+  if (!management && flags["market_watch.topology"] === false) return reply({ error: "\u7522\u696D\u95DC\u806F\u529F\u80FD\u76EE\u524D\u672A\u958B\u653E" }, 403);
+  if (!["GET", ...management ? ["PUT"] : []].includes(req.method)) return reply({ error: "Method not allowed" }, 405);
+  await sql("CREATE TABLE IF NOT EXISTS industry_topology (id INTEGER PRIMARY KEY CHECK(id=1),document TEXT NOT NULL,revision INTEGER NOT NULL,updated_at INTEGER NOT NULL)").run();
+  if (req.method === "PUT") {
+    const body = await req.json().catch(() => null);
+    let document2;
+    try {
+      if (!Number.isInteger(body?.revision) || body.revision < 0) throw Error("\u7248\u672C\u683C\u5F0F\u932F\u8AA4");
+      document2 = validateTopology(body.document);
+    } catch (e) {
+      return reply({ error: e.message }, 400);
+    }
+    const encoded = JSON.stringify(document2), now = Date.now();
+    const row = body.revision === 0 ? await sql("INSERT INTO industry_topology(id,document,revision,updated_at) VALUES(1,?,1,?) ON CONFLICT(id) DO NOTHING RETURNING revision", encoded, now).first() : await sql("UPDATE industry_topology SET document=?,revision=revision+1,updated_at=? WHERE id=1 AND revision=? RETURNING revision", encoded, now, body.revision).first();
+    if (!row) return reply({ error: "\u5176\u4ED6\u7BA1\u7406\u54E1\u5DF2\u66F4\u65B0\u8CC7\u6599\uFF0C\u8ACB\u91CD\u65B0\u8F09\u5165\u5F8C\u518D\u5132\u5B58\u3002" }, 409);
+    return reply({ ok: true, revision: row.revision, updatedAt: now });
+  }
+  const stored = await sql("SELECT document,revision,updated_at FROM industry_topology WHERE id=1").first();
+  const document = stored ? JSON.parse(stored.document) : INITIAL_TOPOLOGY;
+  if (path === "/industry-topology/news") {
+    if (flags["topology.events"] === false) return reply({ error: "\u95DC\u806F\u4E8B\u4EF6\u76EE\u524D\u672A\u958B\u653E" }, 403);
+    const codes = [...new Set((new URL(req.url).searchParams.get("codes") || "").split(",").filter(Boolean))];
+    const allowed = new Set(publishedTopology(document, flags).companies.map((c) => c.code));
+    if (codes.length > 50 || codes.some((c) => !allowed.has(c))) return reply({ error: "\u516C\u53F8\u7BC4\u570D\u683C\u5F0F\u932F\u8AA4\u6216\u672A\u958B\u653E\uFF0C\u8ACB\u7E2E\u5C0F\u7522\u696D\u7BC4\u570D\u3002" }, 400);
+    if (!codes.length) return reply({ news: [] });
+    const from = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10), to = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const news = await sql("SELECT company_code,title,url,source,news_date,published_at FROM news WHERE company_code IN (" + codes.map(() => "?").join(",") + ") AND news_date BETWEEN ? AND ? ORDER BY published_at DESC LIMIT 80", ...codes, from, to).all();
+    return reply({ news: news.results });
+  }
+  return reply({ document: management ? document : publishedTopology(document, flags), revision: stored?.revision || 0, updatedAt: stored?.updated_at || null });
+}
+
 // worker/management.js
 var FEATURE_TREE = [
   { key: "markets", label: "\u80A1\u7968\u5E02\u5834\u986F\u793A", children: [{ key: "markets.tw", label: "\u53F0\u80A1\u5E02\u5834\uFF08\u641C\u5C0B\u3001\u8FFD\u8E64\u8207\u5E02\u5834\u9801\u9762\uFF09" }, { key: "markets.us", label: "\u7F8E\u80A1\u5E02\u5834\uFF08\u641C\u5C0B\u3001\u8FFD\u8E64\u8207\u5E02\u5834\u9801\u9762\uFF09" }] },
@@ -1343,8 +1458,10 @@ var FEATURE_TREE = [
   { key: "market_watch", label: "\u5E02\u5834\u89C0\u5BDF", children: [
     { key: "market_watch.turnover", label: "\u6210\u4EA4\u503C\u6392\u884C\u8207\u7522\u696D\u8DA8\u52E2" },
     { key: "market_watch.observation", label: "\u512A\u5148\u89C0\u5BDF\u80A1\u8207\u50F9\u503C\u93C8" },
-    { key: "market_watch.stock_events", label: "\u500B\u80A1\u7570\u52D5\u8FFD\u67E5" }
+    { key: "market_watch.stock_events", label: "\u500B\u80A1\u7570\u52D5\u8FFD\u67E5" },
+    { key: "market_watch.topology", label: "\u53F0\u7F8E\u7522\u696D\u95DC\u806F\u5716" }
   ] },
+  { key: "topology", label: "\u7522\u696D\u95DC\u806F\u5167\u5BB9", children: [{ key: "topology.company_relations", label: "\u516C\u53F8\u4F9B\u61C9\uFF0F\u5408\u4F5C\uFF0F\u7AF6\u722D\u95DC\u4FC2" }, { key: "topology.pending", label: "\u5141\u8A31\u6AA2\u8996\u5F85\u78BA\u8A8D\u95DC\u4FC2" }, { key: "topology.events", label: "\u95DC\u806F\u65B0\u805E\u8207 Podcast" }, { key: "topology.analysis", label: "AI \u4E8B\u4EF6\u50B3\u5C0E\u5206\u6790" }] },
   { key: "stock_tools", label: "\u500B\u80A1\u5DE5\u5177", children: [
     { key: "stock_tools.candles", label: "K \u7DDA" },
     { key: "stock_tools.broker_reports", label: "\u5238\u5546\u5831\u544A" },
@@ -1358,6 +1475,7 @@ var FEATURE_TREE = [
   ] }
 ];
 var FEATURE_DESCRIPTIONS = { "markets.tw": "\u53F0\u80A1\u641C\u5C0B\u3001\u8FFD\u8E64\u6E05\u55AE\u53CA\u5E02\u5834\u5207\u63DB\uFF1B\u95DC\u9589\u5F8C\u53EF\u81EA\u52D5\u5207\u81F3\u7F8E\u80A1\u3002", "markets.us": "\u7F8E\u80A1\u641C\u5C0B\u3001\u8FFD\u8E64\u6E05\u55AE\u53CA\u5E02\u5834\u5207\u63DB\uFF1B\u95DC\u9589\u5F8C\u53EF\u81EA\u52D5\u5207\u81F3\u53F0\u80A1\u3002", "news_calendar.news": "\u80A1\u7968\u65B0\u805E\u3001\u65E5\u671F\u65B0\u805E\u8207\u6458\u8981\u5165\u53E3\uFF1B\u4E0D\u9023\u5E36\u96B1\u85CF Podcast \u65E5\u66C6\u3002", "news_calendar.podcast": "Podcast \u65E5\u66C6\u3001\u983B\u9053\u7BE9\u9078\u3001\u63D0\u53CA\u8FFD\u8E64\u80A1\u8207\u7BC0\u76EE\u5165\u53E3\u3002", "news_calendar.collect": "\u7ACB\u5373\u66F4\u65B0\u65B0\u805E\u6309\u9215\uFF1B\u4E0D\u4FEE\u6539\u6BCF\u65E5\u6536\u96C6\u6392\u7A0B\u3002", "news_calendar.podcast_import": "\u532F\u5165 Podcast \u983B\u9053\u5165\u53E3\uFF1B\u5DF2\u532F\u5165\u7BC0\u76EE\u4FDD\u7559\u3002", "market_watch.turnover": "\u53F0\u80A1\u6210\u4EA4\u503C\u6392\u884C\u9801\u9762\u8207\u7522\u696D\u8DA8\u52E2\uFF1B\u7F8E\u80A1\u4E0D\u63D0\u4F9B\u6B64\u6392\u884C\u3002", "market_watch.observation": "\u512A\u5148\u89C0\u5BDF\u80A1\u8207\u50F9\u503C\u93C8\u756B\u9762\u3002", "market_watch.stock_events": "\u500B\u80A1\u7570\u52D5\u8FFD\u67E5\u5340\u584A\u3002", "stock_tools.candles": "K \u7DDA\u5165\u53E3\uFF0C\u6DB5\u84CB\u5747\u7DDA\u3001\u65B9\u5411\u7BAD\u982D\u8207\u652F\u6490\u58D3\u529B\u3002", "stock_tools.broker_reports": "\u516C\u958B\u5238\u5546\u5831\u544A\uFF1B\u8207\u5238\u5546\u5EAB\u5B58\u5206\u958B\u63A7\u5236\u3002", "stock_tools.holdings": "\u5238\u5546\u5EAB\u5B58\u532F\u5165\uFF0F\u6AA2\u8996\u5165\u53E3\uFF1B\u4E0D\u522A\u9664\u88DD\u7F6E\u5EAB\u5B58\u3002", "stock_tools.company_profile": "\u516C\u53F8\u8CA1\u52D9\u53C3\u8003\u5340\u584A\u53CA\u5176\u5206\u6790\u6309\u9215\u3002", "ai_tools.assistant": "\u6D6E\u52D5 AI \u5C0F\u52A9\u624B\u8207\u5C0D\u8A71\u5165\u53E3\u3002", "ai_tools.results": "AI \u6210\u679C\u4E2D\u5FC3\u53CA\u901A\u77E5\u5165\u53E3\uFF1B\u65E2\u6709\u6210\u679C\u4FDD\u7559\u3002", "ai_tools.settings": "AI \u8A2D\u5B9A\u5165\u53E3\uFF1B\u4E0D\u66F4\u52D5\u4F7F\u7528\u8005 API \u91D1\u9470\u6216\u6A21\u578B\u3002" };
+Object.assign(FEATURE_DESCRIPTIONS, { "market_watch.topology": "\u7522\u696D\u95DC\u806F\u9801\u7C64\u8207\u8CC7\u6599 API\uFF1B\u95DC\u9589\u5F8C\u4E0D\u63D0\u4F9B\u62D3\u64B2\u8CC7\u6599\u3002", "topology.company_relations": "\u516C\u53F8\u9593\u5DF2\u5EFA\u6A94\u7684\u4F9B\u61C9\u3001\u5408\u4F5C\u53CA\u7AF6\u722D\u95DC\u4FC2\u3002", "topology.pending": "\u5141\u8A31\u4F7F\u7528\u8005\u4E3B\u52D5\u5C55\u958B\u5F85\u78BA\u8A8D\u95DC\u4FC2\uFF0C\u9810\u8A2D\u4E0D\u986F\u793A\u3002", "topology.events": "\u9078\u5B9A\u7522\u696D\u6216\u516C\u53F8\u7684\u65E2\u6709\u65B0\u805E\u8207 Podcast\u3002", "topology.analysis": "\u4F9D\u4F7F\u7528\u8005\u500B\u4EBA AI \u8A2D\u5B9A\u5206\u6790\u53EF\u80FD\u50B3\u5C0E\u8DEF\u5F91\uFF0C\u9700\u4E3B\u52D5\u9EDE\u64CA\u4E26\u7522\u751F\u7528\u91CF\u3002" });
 for (const parent of FEATURE_TREE) for (const child of parent.children) child.description = FEATURE_DESCRIPTIONS[child.key];
 var ALL_KEYS = FEATURE_TREE.flatMap((x) => [x.key, ...x.children.map((y) => y.key)]);
 var tokenOf = (req) => (req.headers.get("Authorization") || "").replace(/^Bearer /, "").trim();
@@ -1395,6 +1513,12 @@ async function managementRoute(req, env, { sql, reply, randomToken: randomToken2
     const overrides = user ? await sql("SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?", user.id).all() : { results: [] };
     return reply({ features: effectiveFlags(flags.results, overrides.results) });
   }
+  if (["/industry-topology", "/industry-topology/news"].includes(path)) {
+    await ensureTables(sql);
+    const flags = await sql("SELECT feature_key,enabled FROM feature_flags").all();
+    const overrides = user ? await sql("SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?", user.id).all() : { results: [] };
+    return topologyRoute(req, { sql, reply, flags: effectiveFlags(flags.results, overrides.results) });
+  }
   if (!path.startsWith("/management")) return null;
   const token = tokenOf(req);
   if (!token) return reply({ error: "\u7BA1\u7406\u8005\u5C1A\u672A\u767B\u5165" }, 401);
@@ -1402,6 +1526,8 @@ async function managementRoute(req, env, { sql, reply, randomToken: randomToken2
   const session = await sql("SELECT expires_at FROM admin_sessions WHERE token_hash=? AND expires_at>?", await hash(token), Date.now()).first();
   if (!session) return reply({ error: "\u7BA1\u7406\u8005\u767B\u5165\u5DF2\u904E\u671F\uFF0C\u8ACB\u91CD\u65B0\u767B\u5165" }, 401);
   await ensureTables(sql);
+  const topology = await topologyRoute(req, { sql, reply, management: true });
+  if (topology) return topology;
   if (path === "/management" && req.method === "GET") {
     const [flags, users, overrides] = await Promise.all([
       sql("SELECT feature_key,enabled FROM feature_flags").all(),
@@ -1445,7 +1571,7 @@ function effectiveFlags(flags, overrides) {
   const global = Object.fromEntries(flags.map((x) => [x.feature_key, !!x.enabled])), personal = Object.fromEntries(overrides.map((x) => [x.feature_key, !!x.enabled]));
   const out = {};
   for (const key of ALL_KEYS) out[key] = Object.hasOwn(personal, key) ? personal[key] : Object.hasOwn(global, key) ? global[key] : true;
-  for (const node of FEATURE_TREE) out[node.key] = node.children.some((c) => out[c.key]);
+  for (const node2 of FEATURE_TREE) out[node2.key] = node2.children.some((c) => out[c.key]);
   return out;
 }
 async function hash(value) {
@@ -1469,24 +1595,24 @@ function dailyBars(result, code) {
   }
   return rows;
 }
-async function fetchDailyBars(company) {
-  const symbol = company.code + (company.market === "\u4E0A\u6AC3" ? ".TWO" : ".TW");
+async function fetchDailyBars(company2) {
+  const symbol = company2.code + (company2.market === "\u4E0A\u6AC3" ? ".TWO" : ".TW");
   for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
     try {
       const r = await fetch(`https://${host}/v8/finance/chart/${symbol}?interval=1d&range=2y&includePrePost=false`, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }, signal: AbortSignal.timeout(7e3) });
       if (!r.ok) continue;
       const result = (await r.json()).chart?.result?.[0];
       if (result?.meta?.symbol !== symbol) continue;
-      const rows2 = dailyBars(result, company.code);
+      const rows2 = dailyBars(result, company2.code);
       if (rows2.length) return { rows: rows2, source: "Yahoo Finance" };
     } catch {
     }
   }
-  const now = new Date(Date.now() + 8 * 36e5), otc = company.market === "\u4E0A\u6AC3";
+  const now = new Date(Date.now() + 8 * 36e5), otc = company2.market === "\u4E0A\u6AC3";
   const months = await Promise.all(Array.from({ length: 25 }, async (_, i) => {
     try {
       const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)), month = d.toISOString().slice(0, 7), date = month.replace("-", "") + "01";
-      const u = otc ? `https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?response=json&date=${month.replace("-", "/")}/01&code=${company.code}` : `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${date}&stockNo=${company.code}`;
+      const u = otc ? `https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?response=json&date=${month.replace("-", "/")}/01&code=${company2.code}` : `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${date}&stockNo=${company2.code}`;
       const r = await fetch(u, { signal: AbortSignal.timeout(7e3) });
       if (!r.ok) return [];
       const data = await r.json(), records = otc ? data.tables?.[0]?.data : data.data;
@@ -1495,7 +1621,7 @@ async function fetchDailyBars(company) {
         const n = (v) => Number(String(v).replaceAll(",", ""));
         const [open, high, low, close] = row.slice(3, 7).map(n), volume = n(row[1]) * (otc ? 1e3 : 1);
         if (key.slice(0, 7) !== month || ![open, high, low, close].every((v) => Number.isFinite(v) && v > 0) || low > Math.min(open, close) || high < Math.max(open, close)) return [];
-        return [{ code: company.code, date: key, open, high, low, close, volume: Number.isFinite(volume) ? volume : null }];
+        return [{ code: company2.code, date: key, open, high, low, close, volume: Number.isFinite(volume) ? volume : null }];
       });
     } catch {
       return [];
@@ -1536,7 +1662,7 @@ function xmlText(value) {
     return n > 0 && n <= 1114111 ? String.fromCodePoint(n) : "";
   });
 }
-function parsePreview(xml, company, now = /* @__PURE__ */ new Date(), conflicts = [], rangeStart = null) {
+function parsePreview(xml, company2, now = /* @__PURE__ */ new Date(), conflicts = [], rangeStart = null) {
   if (!/<channel[\s>]/.test(xml)) throw Error("Invalid news feed");
   const start = new Date(now);
   const day = start.getUTCDate();
@@ -1551,14 +1677,14 @@ function parsePreview(xml, company, now = /* @__PURE__ */ new Date(), conflicts 
     const sourceURL = xmlText(match[1].match(/<source\b[^>]*\burl=["']([^"']+)["']/)?.[1]);
     const source = sourceDomain(sourceURL);
     if (!source) continue;
-    if (!companyMention(title, company, conflicts)) continue;
+    if (!companyMention(title, company2, conflicts)) continue;
     if (!Number.isFinite(published.getTime()) || published < start || published > now) continue;
     try {
       if (new URL(link).protocol !== "https:") continue;
     } catch {
       continue;
     }
-    rows.set(link, { company_code: company.code, title, url: link, source, published_at: published.toISOString(), news_date: marketDay(published, isUS(company.code) ? "US" : "TW"), preview: true });
+    rows.set(link, { company_code: company2.code, title, url: link, source, published_at: published.toISOString(), news_date: marketDay(published, isUS(company2.code) ? "US" : "TW"), preview: true });
   }
   return curateNews([...rows.values()]);
 }
@@ -1835,7 +1961,7 @@ var index_default = { async fetch(req, env) {
       await sql("INSERT INTO managed_users(user_id,first_login_at,last_login_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET last_login_at=excluded.last_login_at", identity.sub, Date.now(), Date.now()).run();
       return new Response(null, { status: 302, headers: { Location: appURL.href + "#session=" + token2, "Set-Cookie": "oauth_state=; Secure; HttpOnly; SameSite=Lax; Max-Age=0; Path=/auth", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
     }
-    const managementAuth = path === "/features" && req.headers.get("Authorization") ? null : await managementRoute(req, env, { sql, reply, randomToken });
+    const managementAuth = ["/features", "/industry-topology", "/industry-topology/news"].includes(path) && req.headers.get("Authorization") ? null : await managementRoute(req, env, { sql, reply, randomToken });
     if (managementAuth) return managementAuth;
     if (path.startsWith("/admin/")) {
       const provided = req.headers.get("Authorization") || "";
@@ -1870,10 +1996,10 @@ var index_default = { async fetch(req, env) {
         }
         let profile;
         if (b.official) {
-          const company = await sql("SELECT * FROM companies WHERE code=?", b.code).first(), o = b.official;
-          if (o.name !== company.name && o.full_name !== company.full_name) return reply({ error: "Official company mismatch" }, 400);
+          const company2 = await sql("SELECT * FROM companies WHERE code=?", b.code).first(), o = b.official;
+          if (o.name !== company2.name && o.full_name !== company2.full_name) return reply({ error: "Official company mismatch" }, 400);
           if (typeof o.introduction !== "string" || !Array.isArray(o.metrics) || o.metrics.length > 3 || o.metrics.some((m) => !["\u5BE6\u6536\u8CC7\u672C\u984D\uFF08\u5143\uFF09", "\u5DF2\u767C\u884C\u666E\u901A\u80A1\u6578\uFF08\u80A1\uFF09"].includes(m.label) || !/^\d[\d,]*(?:\.\d+)?$/.test(m.value))) return reply({ error: "Invalid official facts" }, 400);
-          const otc = company.market === "\u4E0A\u6AC3";
+          const otc = company2.market === "\u4E0A\u6AC3";
           profile = { code: b.code, heading: b.code + " " + o.name, introduction: o.introduction.slice(0, 400), metrics: o.metrics, source: otc ? "\u6AC3\u8CB7\u4E2D\u5FC3" : "\u81FA\u7063\u8B49\u5238\u4EA4\u6613\u6240", url: otc ? "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O" : "https://openapi.twse.com.tw/v1/opendata/t187ap03_L", fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), notice: "\u8CA1\u5831\u72D7\u516C\u958B\u9801\u9762\u66AB\u6642\u7121\u6CD5\u53D6\u5F97\uFF0C\u76EE\u524D\u63A1\u7528\u4EA4\u6613\u6240\u516C\u958B\u516C\u53F8\u57FA\u672C\u8CC7\u6599\u3002" };
         } else {
           if (typeof b.html !== "string" || b.html.length > 2e6) return reply({ error: "Invalid page" }, 400);
@@ -1965,8 +2091,8 @@ var index_default = { async fetch(req, env) {
         return reply({ names: (await sql("SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0", c.code, c.name, c.name).all()).results.map((x) => x.name) });
       }
       if (path === "/admin/collection-company") {
-        const company = await sql("SELECT * FROM companies WHERE code=?", url.searchParams.get("code")).first();
-        return company ? reply({ company }) : reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
+        const company2 = await sql("SELECT * FROM companies WHERE code=?", url.searchParams.get("code")).first();
+        return company2 ? reply({ company: company2 }) : reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
       }
       if (path === "/admin/news-attempts" && req.method === "POST") {
         const b = await req.json();
@@ -2094,9 +2220,9 @@ var index_default = { async fetch(req, env) {
     if (path === "/intraday") {
       const code = url.searchParams.get("code"), interval = url.searchParams.get("interval") || "5m";
       if (!/^[1-9]\d{3}$/.test(code || "") || !["1d", "1m", "5m", "15m", "60m"].includes(interval)) return reply({ error: "Invalid interval" }, 400);
-      const company = await sql("SELECT * FROM companies WHERE code=?", code).first();
-      if (!company) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
-      const symbol = code + (company.market === "\u4E0A\u6AC3" ? ".TWO" : ".TW"), key = new Request(url.origin + "/cache/intraday/" + symbol + "/" + interval), cache = globalThis.caches?.default;
+      const company2 = await sql("SELECT * FROM companies WHERE code=?", code).first();
+      if (!company2) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
+      const symbol = code + (company2.market === "\u4E0A\u6AC3" ? ".TWO" : ".TW"), key = new Request(url.origin + "/cache/intraday/" + symbol + "/" + interval), cache = globalThis.caches?.default;
       const cached = url.searchParams.get("refresh") === "1" ? null : await cache?.match(key);
       if (cached) return reply(await cached.json());
       let result;
@@ -2180,9 +2306,9 @@ var index_default = { async fetch(req, env) {
       }
       if (req.method === "POST" || !usable.length || shortHistory && !recentlyChecked) {
         try {
-          const company = await sql("SELECT * FROM companies WHERE code=?", code).first();
-          if (!company) return usable.length ? reply({ prices, refreshed: false }) : reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
-          const { rows, source } = await fetchDailyBars(company);
+          const company2 = await sql("SELECT * FROM companies WHERE code=?", code).first();
+          if (!company2) return usable.length ? reply({ prices, refreshed: false }) : reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
+          const { rows, source } = await fetchDailyBars(company2);
           await sql("CREATE TABLE IF NOT EXISTS prices(code TEXT NOT NULL,date TEXT NOT NULL,open REAL,high REAL,low REAL,close REAL NOT NULL,volume REAL,PRIMARY KEY(code,date))").run();
           for (let i = 0; i < rows.length; i += 50) await env.DB.batch(rows.slice(i, i + 50).map((p) => sql("INSERT INTO prices(code,date,open,high,low,close,volume) VALUES(?,?,?,?,?,?,?) ON CONFLICT(code,date) DO UPDATE SET open=excluded.open,high=excluded.high,low=excluded.low,close=excluded.close,volume=excluded.volume", p.code, p.date, p.open, p.high, p.low, p.close, p.volume)));
           await sql("CREATE TABLE IF NOT EXISTS price_history_sync(code TEXT PRIMARY KEY,updated_at INTEGER NOT NULL)").run();
@@ -2277,21 +2403,21 @@ var index_default = { async fetch(req, env) {
     if (path === "/preview" && req.method === "GET") {
       const code = url.searchParams.get("code");
       if (!/^\d{4,6}$/.test(code || "")) return reply({ error: "\u80A1\u865F\u683C\u5F0F\u932F\u8AA4" }, 400);
-      const company = await sql("SELECT * FROM companies WHERE code=?", code).first();
-      if (!company) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
+      const company2 = await sql("SELECT * FROM companies WHERE code=?", code).first();
+      if (!company2) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
       if (url.searchParams.get("stored") === "1") {
         const from = new Date(Date.now() - 32 * 864e5).toISOString();
-        return reply({ company, news: (await sql("SELECT * FROM news WHERE company_code=? AND published_at>=? ORDER BY published_at DESC,id DESC", code, from).all()).results });
+        return reply({ company: company2, news: (await sql("SELECT * FROM news WHERE company_code=? AND published_at>=? ORDER BY published_at DESC,id DESC", code, from).all()).results });
       }
       const feed = new URL("https://news.google.com/rss/search");
-      feed.search = new URLSearchParams({ q: `("${company.name}" OR "${company.full_name}" OR "${code}") (site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) when:1m`, hl: "zh-TW", gl: "TW", ceid: "TW:zh-Hant" }).toString();
+      feed.search = new URLSearchParams({ q: `("${company2.name}" OR "${company2.full_name}" OR "${code}") (site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com) when:1m`, hl: "zh-TW", gl: "TW", ceid: "TW:zh-Hant" }).toString();
       let httpStatus = 0;
       try {
         const response = await fetch(feed, { headers: { "User-Agent": "StockNewsCalendar/2.0" }, signal: AbortSignal.timeout(2e4) });
         httpStatus = response.status;
         if (!response.ok) throw Error("Google News RSS HTTP " + httpStatus);
-        const conflicts = (await sql("SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0", company.code, company.name, company.name).all()).results.map((x) => x.name);
-        return reply({ company, news: parsePreview(await response.text(), company, /* @__PURE__ */ new Date(), conflicts) });
+        const conflicts = (await sql("SELECT name FROM companies WHERE code<>? AND name<>? AND instr(name,?)>0", company2.code, company2.name, company2.name).all()).results.map((x) => x.name);
+        return reply({ company: company2, news: parsePreview(await response.text(), company2, /* @__PURE__ */ new Date(), conflicts) });
       } catch (e) {
         const quota = d1QuotaError(e);
         if (quota) throw e;

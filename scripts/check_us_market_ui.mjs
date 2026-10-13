@@ -1,6 +1,7 @@
 import {parseHTML} from 'linkedom';
 import {build} from 'esbuild';
 import {readFileSync} from 'node:fs';
+import {INITIAL_TOPOLOGY,publishedTopology} from '../shared/industry-topology.js';
 import assert from 'node:assert/strict';
 const {window}=parseHTML('<html><body><div id="app"></div></body></html>');
 Object.assign(globalThis,{window,document:window.document,DOMParser:window.DOMParser,CustomEvent:window.CustomEvent,Node:window.Node,location:{hostname:'localhost',pathname:'/',hash:''},history:{replaceState(){}},requestAnimationFrame:fn=>setTimeout(fn,0),matchMedia:()=>({matches:false,addEventListener(){}})});
@@ -11,6 +12,8 @@ const intervals=globalThis.setInterval;globalThis.setInterval=()=>0;
 const companies=[{code:'2330',name:'台積電',full_name:'台灣積體電路',market:'上市'},{code:'US:NVDA',name:'輝達',full_name:'NVIDIA',market:'美股'}];
 const news=[{company_code:'2330',news_date:'2026-10-08',published_at:'2026-10-08T01:00:00Z',title:'台積電台股專用新聞',source:'中央社',url:'https://www.cna.com.tw/tw'},{company_code:'US:NVDA',news_date:'2026-10-08',published_at:'2026-10-08T18:00:00Z',title:'NVIDIA US only news',source:'Reuters',url:'https://www.reuters.com/us'}];
 let featureFlags={};let accountSyncEnabled=true;const calls=[];globalThis.fetch=async(value,options={})=>{const u=new URL(value,'https://ui.test');calls.push(u.pathname+u.search);let result={};
+ if(u.pathname==='/industry-topology')result={document:publishedTopology(INITIAL_TOPOLOGY,featureFlags),revision:0};
+ if(u.pathname==='/industry-topology/news')result={news:news.filter(n=>(u.searchParams.get('codes')||'').split(',').includes(n.company_code))};
  if(u.pathname==='/features')result={features:featureFlags};
  if(u.pathname==='/watchlists')result={companies};
  if(u.pathname==='/account-settings'){if(options.body)accountSyncEnabled=JSON.parse(options.body).sync_enabled;result={owner_id:'alice',sync_enabled:accountSyncEnabled};}
@@ -41,6 +44,14 @@ try{
  mod.state.query='NVDA';await mod.search();assert.ok(calls.some(p=>p.includes('/prices?code=US%3ANVDA')));assert.equal(mod.state.selected,'US:NVDA');
  await mod.openRankingStock('US:NVDA');assert.ok(document.querySelector('#stock-ranking-title').textContent.includes('美股走勢（USD）'));assert.equal(document.querySelector('[data-candle-period="1m"]'),null);assert.ok(document.querySelector('[data-candle-period="day"]'));
  document.querySelector('#close-stock-ranking').click();await mod.switchMarket('TW');assert.equal(document.querySelector('#ranking-tab').hidden,false);
+ document.querySelector('#topology-tab').click();
+ for(let i=0;i<60&&!document.querySelector('#topology-tab-panel .topology-svg');i++)await new Promise(r=>setTimeout(r,5));
+ assert.ok(document.querySelector('#topology-tab-panel .topology-svg'));assert.equal(mod.state.topologyPage,true);assert.equal(document.querySelector('#news-tab-panel').style.display,'none');assert.equal(document.querySelector('#ranking-tab-panel').style.display,'none');
+ const tracked=document.querySelector('#topology-tracked');tracked.checked=true;tracked.dispatchEvent(new window.Event('change'));assert.equal(document.querySelectorAll('.topology-company').length,2);
+ document.querySelector('#topology-tab-panel [data-topology-company="2330"]').click();assert.ok(document.querySelector('.topology-node.selected'));
+ featureFlags={'market_watch.topology':false};await mod.refreshFeatures();await Promise.resolve();assert.equal(mod.state.topologyPage,false);assert.equal(document.querySelector('#topology-tab').getAttribute('data-feature-disabled'),'true');assert.equal(document.querySelector('#news-tab-panel').style.display,'');
+ featureFlags={};await mod.refreshFeatures();await Promise.resolve();assert.ok(!document.querySelector('#topology-tab').hasAttribute('data-feature-disabled'));
+
  document.querySelector('[data-watch-market="US"]').click();await new Promise(r=>setTimeout(r,10));document.querySelector('#open-account-settings').click();
  const toggle=()=>document.querySelector('#account-sync');toggle().checked=false;toggle().dispatchEvent(new window.Event('change',{bubbles:true}));
  for(let i=0;i<100&&!mod.state.message.includes('已關閉此帳號');i++)await new Promise(r=>setTimeout(r,5));
@@ -59,5 +70,5 @@ try{
  featureFlags={'ai_tools.assistant':false};await mod.refreshFeatures();await Promise.resolve();
  assert.equal(document.querySelector('#site-assistant-panel').hidden,true);
  mod.state.user=null;mod.render();await Promise.resolve();assert.equal(document.querySelector('#site-assistant-launch').hidden,true);
- console.log('US market DOM integration passed: tabs, isolated news, mixed watchlist, filters, per-market dates, search and daily candle dialog.');
+ console.log('US market DOM integration passed: tabs, isolated news, mixed watchlist, filters, per-market dates, search, daily candle dialog and topology with admin feature control.');
 }finally{globalThis.setInterval=intervals;}
