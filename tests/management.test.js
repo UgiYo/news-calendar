@@ -41,3 +41,9 @@ test('admin login is disabled until deployment credentials are configured',async
  const route=req=>managementRoute(req,{}, {sql,reply,randomToken:()=>crypto.randomUUID()});
  const response=await route(request('/admin/login',{method:'POST',body:{username:'admin',password:'secret'}}));assert.equal(response.status,503);db.close();
 });
+test('admin catalogue includes market controls, independent tool switches and complete frontend mappings',async()=>{
+ const {db,route}=await setup();const {token}=await (await route(request('/admin/login',{method:'POST',body:{username:'admin',password:'test-password'}}))).json();
+ const catalogue=await (await route(request('/management',{token}))).json();const leaves=catalogue.tree.flatMap(group=>group.children);const {FEATURE_SELECTORS,availableMarkets}=await import('../src/feature-policy.js');assert.deepEqual(leaves.map(f=>f.key).sort(),Object.keys(FEATURE_SELECTORS).sort());assert.ok(leaves.every(f=>f.description));
+ await route(request('/management/features',{method:'PUT',token,body:{features:[{key:'markets.us',enabled:false},{key:'stock_tools.broker_reports',enabled:false}]}}));const global=(await (await route(request('/features'))).json()).features;assert.deepEqual(availableMarkets(global),['TW']);assert.equal(global['stock_tools.holdings'],true);assert.equal(global['stock_tools.broker_reports'],false);
+ await route(request('/management/users/google-user/features',{method:'PUT',token,body:{key:'markets.us',enabled:true}}));const personal=(await (await route(request('/features'),{id:'google-user'})).json()).features;assert.deepEqual(availableMarkets(personal),['TW','US']);assert.deepEqual(availableMarkets({'markets.tw':false,'markets.us':false}),[]);db.close();
+});

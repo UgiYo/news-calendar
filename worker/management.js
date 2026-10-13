@@ -1,7 +1,10 @@
 const FEATURE_TREE=[
+ {key:'markets',label:'股票市場顯示',children:[{key:'markets.tw',label:'台股市場（搜尋、追蹤與市場頁面）'},{key:'markets.us',label:'美股市場（搜尋、追蹤與市場頁面）'}]},
  {key:'news_calendar',label:'新聞月曆',children:[
   {key:'news_calendar.news',label:'新聞與日期摘要'},
-  {key:'news_calendar.podcast',label:'Podcast 日曆與提及追蹤股'}
+  {key:'news_calendar.podcast',label:'Podcast 日曆與提及追蹤股'},
+  {key:'news_calendar.collect',label:'手動更新新聞'},
+  {key:'news_calendar.podcast_import',label:'匯入 Podcast 頻道'}
  ]},
  {key:'market_watch',label:'市場觀察',children:[
   {key:'market_watch.turnover',label:'成交值排行與產業趨勢'},
@@ -10,13 +13,18 @@ const FEATURE_TREE=[
  ]},
  {key:'stock_tools',label:'個股工具',children:[
   {key:'stock_tools.candles',label:'K 線'},
-  {key:'stock_tools.broker_reports',label:'券商報告'}
+  {key:'stock_tools.broker_reports',label:'券商報告'},
+  {key:'stock_tools.holdings',label:'券商庫存'},
+  {key:'stock_tools.company_profile',label:'公司財務參考'}
  ]},
  {key:'ai_tools',label:'AI 工具',children:[
   {key:'ai_tools.assistant',label:'AI 小助手'},
-  {key:'ai_tools.results',label:'AI 成果中心與通知'}
+  {key:'ai_tools.results',label:'AI 成果中心與通知'},
+  {key:'ai_tools.settings',label:'AI 設定入口'}
  ]}
 ];
+const FEATURE_DESCRIPTIONS={"markets.tw": "台股搜尋、追蹤清單及市場切換；關閉後可自動切至美股。", "markets.us": "美股搜尋、追蹤清單及市場切換；關閉後可自動切至台股。", "news_calendar.news": "股票新聞、日期新聞與摘要入口；不連帶隱藏 Podcast 日曆。", "news_calendar.podcast": "Podcast 日曆、頻道篩選、提及追蹤股與節目入口。", "news_calendar.collect": "立即更新新聞按鈕；不修改每日收集排程。", "news_calendar.podcast_import": "匯入 Podcast 頻道入口；已匯入節目保留。", "market_watch.turnover": "台股成交值排行頁面與產業趨勢；美股不提供此排行。", "market_watch.observation": "優先觀察股與價值鏈畫面。", "market_watch.stock_events": "個股異動追查區塊。", "stock_tools.candles": "K 線入口，涵蓋均線、方向箭頭與支撐壓力。", "stock_tools.broker_reports": "公開券商報告；與券商庫存分開控制。", "stock_tools.holdings": "券商庫存匯入／檢視入口；不刪除裝置庫存。", "stock_tools.company_profile": "公司財務參考區塊及其分析按鈕。", "ai_tools.assistant": "浮動 AI 小助手與對話入口。", "ai_tools.results": "AI 成果中心及通知入口；既有成果保留。", "ai_tools.settings": "AI 設定入口；不更動使用者 API 金鑰或模型。"};
+for(const parent of FEATURE_TREE)for(const child of parent.children)child.description=FEATURE_DESCRIPTIONS[child.key];
 const ALL_KEYS=FEATURE_TREE.flatMap(x=>[x.key,...x.children.map(y=>y.key)]);
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 const tokenOf=req=>(req.headers.get('Authorization')||'').replace(/^Bearer /,'').trim();
