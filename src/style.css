@@ -189,3 +189,5 @@ aside>.podcast-controls{margin-top:24px;padding-top:16px;border-top:1px solid va
 .watch-market-empty{margin:10px 0;line-height:1.6}
 
 [data-feature-disabled="true"]{display:none!important}
+
+.calendar-heading{gap:12px;flex-wrap:wrap}.calendar-navigation{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.calendar-date-jump{display:flex;align-items:center;gap:6px}.calendar-date-jump label{margin:0;white-space:nowrap}.calendar-date-jump input{width:160px;color-scheme:light dark;background:var(--theme-surface,white);color:var(--theme-text,#163047)}.calendar-date-jump button,.calendar-month-buttons button{white-space:nowrap}.calendar-date-jump button{margin-left:0}.calendar-month-buttons{display:flex;align-items:center}@media(max-width:520px){.calendar-navigation{width:100%;justify-content:space-between;gap:8px}.calendar-date-jump{flex-wrap:wrap}.calendar-date-jump input{width:145px}}
