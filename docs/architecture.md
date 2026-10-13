@@ -2,9 +2,29 @@
 
 本圖依 2026-10-13 的 `main`（`24b0246`）程式碼、工作流程與部署文件整理，涵蓋台股、美股、Podcast、AI 小助手與帳號同步。這是目前程式可提供的服務關係；外部帳號的部署狀態、Secrets 與功能是否啟用，仍取決於實際設定。
 
-![股聞日曆技術與服務架構](architecture.svg)
+本次依 `main`（`09bd5cd`）將架構拆成前端、後端兩張圖。圖中實線表示主要資料存取，虛線表示部署、觸發或選用的 AI 路徑；箭頭指向呼叫／交付的對象，雙向箭頭代表讀寫或互動。
 
-查看 [PNG 圖片](architecture.png) 或 [可編輯 Mermaid 原始碼](architecture.mmd)。圖中實線表示主要資料存取，虛線表示部署、觸發或選用的 AI 路徑；箭頭指向呼叫／交付的對象，雙向箭頭代表讀寫或互動。
+## 前端架構圖
+
+![股聞日曆前端架構圖](frontend-architecture.svg)
+
+[PNG 圖片](frontend-architecture.png) · [可編輯 Mermaid 原始碼](frontend-architecture.mmd)
+
+前端由 GitHub Pages 提供靜態資源，以 `src/main.js` 與 `src/admin.js` 為入口，使用原生 JavaScript、CSS、SVG 圖表及 marked。畫面模組透過裝置儲存保存狀態，透過 API client 呼叫後端與同步帳號資料。Android Custom Tabs 開啟同一個網站。
+
+AI 畫面可直接連指定模型服務，或透過配對的本機 Python 轉送／執行背景任務。雲端背景 AI 則經後端 API 排隊。前端圖中的後端方塊只標示服務介面；登入驗證、D1 與 Actions 的處理關係在下一張圖展開。
+
+## 後端架構圖
+
+![股聞日曆後端架構圖](backend-architecture.svg)
+
+[PNG 圖片](backend-architecture.png) · [可編輯 Mermaid 原始碼](backend-architecture.mmd)
+
+後端以 Cloudflare Pages Advanced Mode 的 `_worker.js` 提供 API（另保留 Workers 部署選項），由 API 入口處理 CORS、登入與權限，再交給各路由服務。D1 保存市場資料、帳號資料、任務與持久化快取；Workers Cache API 只負責選用的行情快取。
+
+Actions 透過蒐集器認證呼叫 `/admin/*`，由 API 存取 D1，並依排程或 workflow dispatch 蒐集資料／處理公開 AI 背景任務。公開資料可由 API 即時讀取，也可由 Actions 同步。共用摘要與個人雲端背景使用不同的 Key 來源；公司 LiteLLM 的本機路徑請見前端圖。
+
+原本的整體總覽保留供交叉參照：[SVG](architecture.svg) · [PNG](architecture.png) · [Mermaid](architecture.mmd)。
 
 ## 使用技術
 
@@ -83,4 +103,4 @@ API 的 Pages Git 整合以 `main` 的程式碼重新 bundle `_worker.js`，不�
 - 帳號／快取：[`account-results.js`](../worker/account-results.js)、[`stock-event-cache.js`](../worker/stock-event-cache.js)、[`summary-cache.js`](../worker/summary-cache.js)、[`ai-jobs.js`](../worker/ai-jobs.js)。
 - 本機與 Android：[`local_ai_bridge.py`](../tools/local_ai_bridge.py)、[`android/README.md`](../android/README.md)。
 
-調整服務或資料流時，同步更新本文件、`architecture.mmd` 與 SVG／PNG 圖片；本文件只記錄設定名稱，不放入真實金鑰、token 或使用者資料。
+調整服務或資料流時，同步更新本文件、前後端 Mermaid 原始碼及 SVG／PNG 圖片；需要時也更新整體總覽。本文件只記錄設定名稱，不放入真實金鑰、token 或使用者資料。

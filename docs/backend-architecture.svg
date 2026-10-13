@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1460" height="1210" viewBox="0 0 1460 1210" role="img" aria-labelledby="title desc">
+<title id="title">BACKEND ARCHITECTURE</title><desc id="desc">API authentication, route services, persistence and background processing</desc>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#64748b"/></marker></defs>
+<rect width="1460" height="1210" fill="#f8fafc"/>
+<text x="40" y="49" font-family="DejaVu Sans, Arial, sans-serif" font-size="31" font-weight="bold" fill="#0f172a">BACKEND ARCHITECTURE</text>
+<text x="40" y="82" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">API authentication, route services, persistence and background processing</text>
+<text x="40" y="111" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#64748b">Stock News Calendar / split views / 2026-10-13</text>
+<path d="M730,255 L730,335" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<rect x="746" y="285" width="57" height="25" rx="4" fill="#f8fafc"/>
+<text x="750" y="303" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">HTTPS</text>
+<path d="M1060,210 L1025,210 L1025,400 L990,400" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" stroke-dasharray="7 6"/>
+<rect x="1076" y="287" width="102" height="25" rx="4" fill="#f8fafc"/>
+<text x="1080" y="305" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">Git deploy</text>
+<path d="M470,410 L400,410" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<rect x="407" y="379" width="48" height="25" rx="4" fill="#f8fafc"/>
+<text x="411" y="397" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">OIDC</text>
+<path d="M730,490 L730,590" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)"/>
+<rect x="746" y="526" width="57" height="25" rx="4" fill="#f8fafc"/>
+<text x="750" y="544" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">route</text>
+<path d="M470,690 L400,690" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<rect x="409" y="660" width="39" height="25" rx="4" fill="#f8fafc"/>
+<text x="413" y="678" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">SQL</text>
+<path d="M990,690 L1060,690" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)"/>
+<rect x="1004" y="660" width="57" height="25" rx="4" fill="#f8fafc"/>
+<text x="1008" y="678" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">fetch</text>
+<path d="M730,805 L730,930" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" stroke-dasharray="7 6"/>
+<rect x="742" y="844" width="84" height="25" rx="4" fill="#f8fafc"/>
+<text x="746" y="862" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">dispatch</text>
+<path d="M470,1010 L435,1010 L435,755 L470,755" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<path d="M990,1040 L1030,1040 L1030,760 L1060,760" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)"/>
+<path d="M990,1080 L1060,1080" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" stroke-dasharray="7 6"/>
+<rect x="1008" y="1050" width="30" height="25" rx="4" fill="#f8fafc"/>
+<text x="1012" y="1068" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">AI</text>
+<path d="M470,790 L445,790 L445,885 L220,885 L220,930" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<rect x="61" y="853" width="102" height="25" rx="4" fill="#f8fafc"/>
+<text x="65" y="871" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">edge cache</text>
+<rect x="470" y="150" width="520" height="105" rx="14" fill="white" stroke="#2563eb" stroke-width="2"/>
+<rect x="470" y="150" width="7" height="105" rx="3" fill="#2563eb"/>
+<text x="490" y="184" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563eb">Frontend / external caller</text>
+<text x="490" y="215" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">HTTPS JSON + Bearer session</text>
+<text x="490" y="242" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Browser UI and Android use the same API</text>
+<rect x="1060" y="150" width="360" height="105" rx="14" fill="white" stroke="#0f766e" stroke-width="2"/>
+<rect x="1060" y="150" width="7" height="105" rx="3" fill="#0f766e"/>
+<text x="1080" y="184" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#0f766e">API deployment</text>
+<text x="1080" y="215" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Pages Git integration + esbuild</text>
+<text x="1080" y="242" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Advanced Mode: _worker.js</text>
+<rect x="40" y="335" width="360" height="155" rx="14" fill="white" stroke="#7c3aed" stroke-width="2"/>
+<rect x="40" y="335" width="7" height="155" rx="3" fill="#7c3aed"/>
+<text x="60" y="369" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#7c3aed">Identity services</text>
+<text x="60" y="400" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Google OAuth / OIDC + PKCE</text>
+<text x="60" y="427" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">ID token signature validation</text>
+<text x="60" y="454" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Separate admin credentials</text>
+<rect x="470" y="335" width="520" height="155" rx="14" fill="white" stroke="#0f766e" stroke-width="2"/>
+<rect x="470" y="335" width="7" height="155" rx="3" fill="#0f766e"/>
+<text x="490" y="369" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#0f766e">Cloudflare API entry</text>
+<text x="490" y="400" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">worker/index.js / Workers runtime</text>
+<text x="490" y="427" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">CORS / session / account authorization</text>
+<text x="490" y="454" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Collector auth: COLLECTOR_SECRET</text>
+<rect x="40" y="590" width="360" height="215" rx="14" fill="white" stroke="#0f766e" stroke-width="2"/>
+<rect x="40" y="590" width="7" height="215" rx="3" fill="#0f766e"/>
+<text x="60" y="624" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#0f766e">D1 / SQLite</text>
+<text x="60" y="655" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Shared market / news / RSS data</text>
+<text x="60" y="682" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Per user: watchlists / sync / results</text>
+<text x="60" y="709" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Queues + cloud AI task ciphertext</text>
+<text x="60" y="736" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Shared summaries / per-user events</text>
+<text x="60" y="763" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Session hashes / admin settings</text>
+<rect x="470" y="590" width="520" height="215" rx="14" fill="white" stroke="#0f766e" stroke-width="2"/>
+<rect x="470" y="590" width="7" height="215" rx="3" fill="#0f766e"/>
+<text x="490" y="624" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#0f766e">Route service modules</text>
+<text x="490" y="655" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Company / news / prices / ranking</text>
+<text x="490" y="682" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Podcast RSS / transcript / article reader</text>
+<text x="490" y="709" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Account settings / results / watchlists</text>
+<text x="490" y="736" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Stock events / cache / AI job queue</text>
+<text x="490" y="763" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Management / feature permissions</text>
+<rect x="1060" y="590" width="360" height="215" rx="14" fill="white" stroke="#7c3aed" stroke-width="2"/>
+<rect x="1060" y="590" width="7" height="215" rx="3" fill="#7c3aed"/>
+<text x="1080" y="624" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#7c3aed">Public sources</text>
+<text x="1080" y="655" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">TWSE / TPEx / SEC EDGAR</text>
+<text x="1080" y="682" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Yahoo Finance / News RSS</text>
+<text x="1080" y="709" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">CNA / MoneyDJ / Anue / US press</text>
+<text x="1080" y="736" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">StatementDog company facts</text>
+<text x="1080" y="763" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Podcast RSS / audio / transcripts</text>
+<rect x="40" y="930" width="360" height="190" rx="14" fill="white" stroke="#0f766e" stroke-width="2"/>
+<rect x="40" y="930" width="7" height="190" rx="3" fill="#0f766e"/>
+<text x="60" y="964" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#0f766e">Runtime cache</text>
+<text x="60" y="995" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Workers Cache API</text>
+<text x="60" y="1022" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Selected market-data responses</text>
+<text x="60" y="1049" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">D1: persistent summary caches</text>
+<text x="60" y="1076" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">D1: task progress + leases</text>
+<rect x="470" y="930" width="520" height="190" rx="14" fill="white" stroke="#0f766e" stroke-width="2"/>
+<rect x="470" y="930" width="7" height="190" rx="3" fill="#0f766e"/>
+<text x="490" y="964" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#0f766e">GitHub Actions jobs</text>
+<text x="490" y="995" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Cron + API workflow_dispatch</text>
+<text x="490" y="1022" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Python 3.12 / Node.js 22 / FFmpeg</text>
+<text x="490" y="1049" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Claim / write via authenticated /admin/*</text>
+<text x="490" y="1076" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Collect / rank / sync / cloud AI</text>
+<text x="490" y="1103" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">JSON snapshots -&gt; repo -&gt; Pages</text>
+<rect x="1060" y="930" width="360" height="190" rx="14" fill="white" stroke="#b45309" stroke-width="2"/>
+<rect x="1060" y="930" width="7" height="190" rx="3" fill="#b45309"/>
+<text x="1080" y="964" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#b45309">Optional public AI</text>
+<text x="1080" y="995" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">OpenAI / Azure OpenAI</text>
+<text x="1080" y="1022" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Personal cloud background jobs</text>
+<text x="1080" y="1049" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">AES-GCM temporary credentials</text>
+<text x="1080" y="1076" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Separate shared collector key</text>
+<text x="1080" y="1103" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Speech transcription + summaries</text>
+<text x="40" y="1184" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#64748b">Solid: primary data / interaction     Dashed: deployment / optional path     Chinese explanation: docs/architecture.md</text>
+</svg>
