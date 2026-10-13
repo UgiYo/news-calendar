@@ -1,0 +1,22 @@
+flowchart TB
+  caller["前端呼叫端：網站／Android 共用 API"]
+  deploy["Cloudflare Pages Git 整合・esbuild → _worker.js"]
+  entry["API 入口：worker/index.js・CORS／session／權限／蒐集器認證"]
+  identity["Google OAuth／OIDC／PKCE・獨立管理者帳密"]
+  routes["路由服務：新聞／行情／Podcast／帳號同步／快取／任務／管理"]
+  db[("Cloudflare D1／SQLite・共用市場資料＋依使用者隔離資料／任務")]
+  cache["Workers Cache API・選用行情快取"]
+  jobs["GitHub Actions・Python 3.12／Node.js 22／FFmpeg・排程與背景工作"]
+  sources["公開來源：TWSE／TPEx／SEC／Yahoo／新聞 RSS／原文／財報狗／Podcast"]
+  ai["選用公開 AI：OpenAI／Azure・個人背景工作／共用摘要"]
+  caller <-->|"HTTPS JSON＋Bearer session"| entry
+  deploy -.->|"部署"| entry
+  entry <-->|"登入驗證"| identity
+  entry --> routes
+  routes <-->|"DB binding／SQL"| db
+  routes <--> cache
+  routes -->|"即時查詢／內容讀取"| sources
+  routes -.->|"workflow_dispatch"| jobs
+  jobs <-->|"COLLECTOR_SECRET・/admin/*"| routes
+  jobs -->|"蒐集／同步"| sources
+  jobs -.->|"選用 AI／語音"| ai

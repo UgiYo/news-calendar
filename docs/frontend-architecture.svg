@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1460" height="1100" viewBox="0 0 1460 1100" role="img" aria-labelledby="title desc">
+<title id="title">FRONTEND ARCHITECTURE</title><desc id="desc">Browser modules, device state and outbound service connections</desc>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#64748b"/></marker></defs>
+<rect width="1460" height="1100" fill="#f8fafc"/>
+<text x="40" y="49" font-family="DejaVu Sans, Arial, sans-serif" font-size="31" font-weight="bold" fill="#0f172a">FRONTEND ARCHITECTURE</text>
+<text x="40" y="82" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Browser modules, device state and outbound service connections</text>
+<text x="40" y="111" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#64748b">Stock News Calendar / split views / 2026-10-13</text>
+<path d="M730,260 L730,335" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)"/>
+<rect x="746" y="289" width="120" height="25" rx="4" fill="#f8fafc"/>
+<text x="750" y="307" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">HTTPS assets</text>
+<path d="M730,475 L730,550" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<rect x="746" y="502" width="147" height="25" rx="4" fill="#f8fafc"/>
+<text x="750" y="520" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">render / events</text>
+<path d="M460,650 L420,650" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<path d="M1000,650 L1060,650" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<path d="M1240,740 L1240,795 L730,795 L730,870" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+<rect x="861" y="767" width="102" height="25" rx="4" fill="#f8fafc"/>
+<text x="865" y="785" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">HTTPS JSON</text>
+<path d="M1000,705 L1025,705 L1025,945 L1060,945" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" stroke-dasharray="7 6"/>
+<rect x="1046" y="820" width="93" height="25" rx="4" fill="#f8fafc"/>
+<text x="1050" y="838" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">direct AI</text>
+<path d="M520,740 L520,775 L230,775 L230,870" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)" stroke-dasharray="7 6"/>
+<rect x="76" y="802" width="183" height="25" rx="4" fill="#f8fafc"/>
+<text x="80" y="820" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">paired relay / jobs</text>
+<path d="M420,945 L450,945 L450,1045 L1240,1045 L1240,1020" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#a)" stroke-dasharray="7 6"/>
+<rect x="646" y="1018" width="138" height="25" rx="4" fill="#f8fafc"/>
+<text x="650" y="1036" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#334155">local AI relay</text>
+<rect x="40" y="150" width="1380" height="110" rx="14" fill="white" stroke="#2563eb" stroke-width="2"/>
+<rect x="40" y="150" width="7" height="110" rx="3" fill="#2563eb"/>
+<text x="60" y="184" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563eb">Build and hosting</text>
+<text x="60" y="215" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">GitHub Actions: Node.js 24 + Vite 7 -&gt; dist -&gt; GitHub Pages</text>
+<text x="60" y="242" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Static HTML / CSS / ES modules + public/data JSON + local AI ZIP</text>
+<rect x="460" y="335" width="540" height="140" rx="14" fill="white" stroke="#2563eb" stroke-width="2"/>
+<rect x="460" y="335" width="7" height="140" rx="3" fill="#2563eb"/>
+<text x="480" y="369" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563eb">Application entry</text>
+<text x="480" y="400" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">src/main.js / src/admin.js</text>
+<text x="480" y="427" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Vanilla JavaScript + CSS / SVG charts</text>
+<text x="480" y="454" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Android Custom Tabs opens the same site</text>
+<rect x="40" y="550" width="380" height="190" rx="14" fill="white" stroke="#2563eb" stroke-width="2"/>
+<rect x="40" y="550" width="7" height="190" rx="3" fill="#2563eb"/>
+<text x="60" y="584" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563eb">Device state</text>
+<text x="60" y="615" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">localStorage + in-tab memory</text>
+<text x="60" y="642" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Session / watchlists / news / results</text>
+<text x="60" y="669" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Holdings / UI / AI settings</text>
+<text x="60" y="696" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Account-specific data and sync</text>
+<rect x="460" y="550" width="540" height="190" rx="14" fill="white" stroke="#2563eb" stroke-width="2"/>
+<rect x="460" y="550" width="7" height="190" rx="3" fill="#2563eb"/>
+<text x="480" y="584" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563eb">UI and feature modules</text>
+<text x="480" y="615" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Calendar / ranking / TW + US candles</text>
+<text x="480" y="642" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Event study / Podcast / AI assistant</text>
+<text x="480" y="669" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">AI settings / tasks / results center</text>
+<text x="480" y="696" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">marked: Markdown rendering</text>
+<rect x="1060" y="550" width="360" height="190" rx="14" fill="white" stroke="#0f766e" stroke-width="2"/>
+<rect x="1060" y="550" width="7" height="190" rx="3" fill="#0f766e"/>
+<text x="1080" y="584" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#0f766e">API client layer</text>
+<text x="1080" y="615" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">src/api.js + account-sync.js</text>
+<text x="1080" y="642" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Bearer session / owner checks</text>
+<text x="1080" y="669" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Timeouts / D1 quota handling</text>
+<text x="1080" y="696" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Feature flags + result sync</text>
+<rect x="40" y="870" width="380" height="150" rx="14" fill="white" stroke="#b45309" stroke-width="2"/>
+<rect x="40" y="870" width="7" height="150" rx="3" fill="#b45309"/>
+<text x="60" y="904" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#b45309">Optional local Python</text>
+<text x="60" y="935" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">127.0.0.1:8765 / pairing token</text>
+<text x="60" y="962" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">AI relay + background jobs</text>
+<text x="60" y="989" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Local files and checkpoints</text>
+<rect x="460" y="870" width="540" height="150" rx="14" fill="white" stroke="#0f766e" stroke-width="2"/>
+<rect x="460" y="870" width="7" height="150" rx="3" fill="#0f766e"/>
+<text x="480" y="904" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#0f766e">Backend service boundary</text>
+<text x="480" y="935" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Cloudflare Pages API / Workers</text>
+<text x="480" y="962" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Google OAuth / news / market data / RSS</text>
+<text x="480" y="989" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Account sync / queued cloud jobs</text>
+<rect x="1060" y="870" width="360" height="150" rx="14" fill="white" stroke="#7c3aed" stroke-width="2"/>
+<rect x="1060" y="870" width="7" height="150" rx="3" fill="#7c3aed"/>
+<text x="1080" y="904" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#7c3aed">Optional direct AI</text>
+<text x="1080" y="935" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">OpenAI / Azure / LiteLLM</text>
+<text x="1080" y="962" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Independent speech API</text>
+<text x="1080" y="989" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#334155">Key sent to selected provider</text>
+<text x="40" y="1074" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#64748b">Solid: primary data / interaction     Dashed: deployment / optional path     Chinese explanation: docs/architecture.md</text>
+</svg>

@@ -1,0 +1,17 @@
+flowchart TB
+  hosting["GitHub Actions：Node.js 24／Vite 7 → GitHub Pages 靜態資源"]
+  entry["網站入口：src/main.js／src/admin.js・原生 JavaScript／CSS"]
+  ui["畫面模組：月曆／排行／K 線／異動追查／Podcast／AI 小助手／成果中心"]
+  storage["裝置狀態：localStorage／分頁記憶體・登入／資料／AI 設定"]
+  client["API client：src/api.js・帳號同步／session／逾時／配額處理"]
+  api["後端服務介面：Cloudflare Pages API／Workers"]
+  bridge["選用：本機 Python Bridge・配對／轉送／背景工作"]
+  ai["選用 AI：OpenAI／Azure OpenAI／LiteLLM／獨立語音服務"]
+  hosting -->|"HTTPS 靜態資源"| entry
+  entry <-->|"render／操作事件"| ui
+  ui <--> storage
+  ui <--> client
+  client <-->|"HTTPS JSON＋Bearer session"| api
+  ui -.->|"裝置直連・個人 Key"| ai
+  ui <-.->|"localhost 配對／任務"| bridge
+  bridge -.->|"本機 AI 轉送"| ai
