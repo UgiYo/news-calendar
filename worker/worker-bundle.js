@@ -875,6 +875,45 @@ async function accountResultsRoute(req, { sql, reply, user, db }) {
   return reply({ ok: true });
 }
 
+// shared/podcast-identity.js
+function canonicalPodcastFeed(value) {
+  try {
+    const u = new URL(value);
+    u.hash = "";
+    if (u.hostname === "feeds.soundcloud.com") {
+      const match = decodeURIComponent(u.pathname).match(/^\/users\/soundcloud:users:(\d+)\/sounds\.rss\/?$/);
+      if (match) u.pathname = "/users/soundcloud:users:" + match[1] + "/sounds.rss";
+    }
+    return u.href;
+  } catch {
+    return String(value || "");
+  }
+}
+var titleKey = (c) => String(c.title || "").normalize("NFKC").trim().toLowerCase();
+function podcastEpisodeKeys(c) {
+  return c.episode_keys || [...new Set((c.episodes || []).map((e) => String(e.id || "").replace(c.id + "::", "") || e.audio_url).filter(Boolean))].slice(0, 30);
+}
+function samePodcastChannel(a, b) {
+  const af = canonicalPodcastFeed(a.feed || a.refreshFeed), bf = canonicalPodcastFeed(b.feed || b.refreshFeed);
+  if (af && af === bf) return true;
+  if (!titleKey(a) || titleKey(a) !== titleKey(b)) return false;
+  const keys = new Set(podcastEpisodeKeys(a));
+  return podcastEpisodeKeys(b).filter((k) => keys.has(k)).length >= 2;
+}
+function dedupePodcastChannels(channels) {
+  const result = [];
+  for (const channel of channels) {
+    const existing = result.find((c) => samePodcastChannel(c, channel));
+    if (!existing) {
+      result.push({ ...channel, aliases: [...new Set(channel.aliases || [])] });
+      continue;
+    }
+    existing.aliases = [.../* @__PURE__ */ new Set([...existing.aliases, channel.id, ...channel.aliases || []])].filter((id) => id !== existing.id);
+    existing.episode_keys = [.../* @__PURE__ */ new Set([...podcastEpisodeKeys(existing), ...podcastEpisodeKeys(channel)])].slice(0, 60);
+  }
+  return result;
+}
+
 // shared/spotify-feeds.js
 var shows = {
   "6SjGs5mgZ4IAo82tHygxD2": { title: "\u5C0F\u670B\u53CB\u5B78\u6295\u8CC7", author: "\u5C0F\u670B\u53CB\u5718\u968A", feed: "https://feed.firstory.me/rss/user/ckgt1mz641n230804jvx96k4m" },
@@ -899,7 +938,7 @@ function podcastFeed(value) {
   const u = new URL(String(value || "").trim());
   const h = u.hostname.toLowerCase();
   if (u.protocol !== "https:" || u.username || u.password || u.search || u.hash || u.port || !h.includes(".") || /^[\d.]+$/.test(h) || h.includes(":") || /(^|\.)(localhost|local|internal|test|invalid)$/.test(h)) throw Error("\u8ACB\u4F7F\u7528\u516C\u958B HTTPS Podcast RSS \u7DB2\u5740");
-  return u.href;
+  return canonicalPodcastFeed(u.href);
 }
 function payload(data, id, feed) {
   if (!data || typeof data.title !== "string" || !data.title.trim() || data.title.length > 500 || !Array.isArray(data.episodes) || !data.episodes.length || data.episodes.length > 150) throw Error("Podcast \u96C6\u6578\u8CC7\u6599\u683C\u5F0F\u932F\u8AA4");
@@ -1003,6 +1042,16 @@ async function savedSpotifyLookup(sql, url) {
   await sql("CREATE TABLE IF NOT EXISTS spotify_feed_lookups(show_url TEXT PRIMARY KEY,payload TEXT NOT NULL,updated_at INTEGER NOT NULL)").run();
   return sql("SELECT payload,updated_at FROM spotify_feed_lookups WHERE show_url=?", url).first();
 }
+async function podcastChannelGroups(sql, matchTitle = "") {
+  const rows = (await sql("SELECT id,feed,title,updated_at,last_error FROM podcast_channels ORDER BY id LIMIT 100").all()).results;
+  const counts = /* @__PURE__ */ new Map();
+  for (const row of rows) counts.set(row.title, (counts.get(row.title) || 0) + 1);
+  for (const row of rows) if (counts.get(row.title) > 1 || row.title === matchTitle) {
+    const stored = await sql("SELECT payload FROM podcast_channels WHERE id=?", row.id).first();
+    row.episode_keys = podcastEpisodeKeys(JSON.parse(stored.payload));
+  }
+  return dedupePodcastChannels(rows);
+}
 async function sharedPodcastsRoute(req, { sql, reply, user, admin = false, hash: hash3 }) {
   const u = new URL(req.url), path = u.pathname;
   if (!["/podcasts/channels", "/podcasts/episodes", "/admin/podcasts/channels", "/admin/podcasts/update", "/podcasts/resolve"].includes(path)) return null;
@@ -1036,17 +1085,31 @@ async function sharedPodcastsRoute(req, { sql, reply, user, admin = false, hash:
     }
   }
   await sql("CREATE TABLE IF NOT EXISTS podcast_channels(id TEXT PRIMARY KEY,feed TEXT NOT NULL UNIQUE,title TEXT NOT NULL,payload TEXT NOT NULL,created_by TEXT NOT NULL,updated_at TEXT NOT NULL,last_error TEXT)").run();
-  if ((path === "/podcasts/channels" || path === "/admin/podcasts/channels") && req.method === "GET") return reply({ channels: (await sql("SELECT id,feed,title,updated_at,last_error FROM podcast_channels ORDER BY title LIMIT 100").all()).results });
+  if ((path === "/podcasts/channels" || path === "/admin/podcasts/channels") && req.method === "GET") return reply({ channels: (await podcastChannelGroups(sql)).sort((a, b) => a.title.localeCompare(b.title, "zh-TW")) });
   if (path === "/podcasts/episodes" && req.method === "GET") {
-    const row = await sql("SELECT payload,last_error FROM podcast_channels WHERE id=?", u.searchParams.get("id")).first();
-    return row ? reply({ ...JSON.parse(row.payload), error: row.last_error || "" }) : reply({ error: "\u627E\u4E0D\u5230\u983B\u9053" }, 404);
+    const id = u.searchParams.get("id"), groups = await podcastChannelGroups(sql), group = groups.find((c) => c.id === id || c.aliases.includes(id));
+    if (!group) return reply({ error: "\u627E\u4E0D\u5230\u983B\u9053" }, 404);
+    const rows = [];
+    for (const channelId of [group.id, ...group.aliases]) {
+      const row = await sql("SELECT payload,last_error FROM podcast_channels WHERE id=?", channelId).first();
+      if (row) rows.push(row);
+    }
+    const primary = JSON.parse(rows[0].payload), episodes = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      const data = JSON.parse(row.payload);
+      for (const e of data.episodes) {
+        const key = String(e.id || "").replace(data.id + "::", "") || e.audio_url;
+        if (!episodes.has(key)) episodes.set(key, { ...e, id: String(e.id).replace(data.id + "::", "") });
+      }
+    }
+    return reply({ ...primary, episodes: [...episodes.values()].sort((a, b) => b.published_at.localeCompare(a.published_at)), aliases: group.aliases, error: rows.map((r) => r.last_error).filter(Boolean).join("\uFF1B") });
   }
   if (path === "/podcasts/episodes" && req.method === "POST") {
     const row = await sql("SELECT id,feed FROM podcast_channels WHERE id=?", u.searchParams.get("id")).first();
     if (!row) return reply({ error: "\u627E\u4E0D\u5230\u983B\u9053" }, 404);
     try {
       const data = await req.json();
-      if (podcastFeed(data.feed) !== row.feed) throw Error("Feed mismatch");
+      if (podcastFeed(data.feed) !== canonicalPodcastFeed(row.feed)) throw Error("Feed mismatch");
       const saved = payload(data, row.id, row.feed);
       await sql("UPDATE podcast_channels SET title=?,payload=?,updated_at=?,last_error=NULL WHERE id=?", saved.title, JSON.stringify(saved), saved.updated_at, row.id).run();
       return reply(saved);
@@ -1058,6 +1121,12 @@ async function sharedPodcastsRoute(req, { sql, reply, user, admin = false, hash:
     try {
       const data = await req.json(), feed = podcastFeed(data.feed), id = "shared-" + (await hash3(feed)).slice(0, 24), existing = await sql("SELECT payload FROM podcast_channels WHERE feed=?", feed).first();
       if (existing) return reply({ channel: JSON.parse(existing.payload), existing: true });
+      const groups = await podcastChannelGroups(sql, data.title);
+      const equivalent = groups.find((c) => samePodcastChannel(c, data));
+      if (equivalent) {
+        const stored = await sql("SELECT payload FROM podcast_channels WHERE id=?", equivalent.id).first();
+        return reply({ channel: JSON.parse(stored.payload), existing: true });
+      }
       const count = await sql("SELECT COUNT(*) AS total FROM podcast_channels").first();
       if (count.total >= 100) return reply({ error: "\u5171\u7528\u983B\u9053\u5DF2\u9054 100 \u500B\u4E0A\u9650" }, 409);
       const saved = payload(data, id, feed);

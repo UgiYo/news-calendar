@@ -46,7 +46,7 @@ test('imports arbitrary public RSS feeds and keeps them as local channels',async
  // Use the real parser when available; Node test runtime may not expose DOMParser.
  if(old){globalThis.DOMParser=old;const xml='<rss><channel><title>Custom Show</title><item><guid>x1</guid><title>Episode 1</title><pubDate>Thu, 01 Oct 2026 16:05:00 GMT</pubDate><link>https://example.com/ep1</link><enclosure url="https://cdn.example.com/ep1.mp3" type="audio/mpeg"/></item></channel></rss>';const data=parsePodcastRSS(xml,{id:'custom-1',feed:'https://example.com/feed.xml'});assert.equal(data.title,'Custom Show');assert.equal(data.episodes[0].audio_url,'https://cdn.example.com/ep1.mp3');}
  const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};const fakeXml='<rss><channel><title>Any Channel</title><item><guid>x</guid><title>One</title><pubDate>Thu, 01 Oct 2026 16:05:00 GMT</pubDate><enclosure url="https://cdn.example.com/one.mp3"/></item></channel></rss>';globalThis.DOMParser=class{parseFromString(){const item={querySelector:s=>({textContent:s==='title'?'One':'Thu, 01 Oct 2026 16:05:00 GMT',getAttribute:k=>k==='url'?'https://cdn.example.com/one.mp3':''}),};return {querySelector:s=>s==='parsererror'?null:{querySelector:s=>({textContent:'Any Channel'}),querySelectorAll:()=>[item]}};}};
- const data=await importPodcastRSS('https://example.com/feed.xml',{storage,fetcher:async()=>({ok:true,text:async()=>fakeXml})});assert.equal(data.title,'Any Channel');assert.equal(podcastChannels(storage).some(c=>c.feed==='https://example.com/feed.xml'),true);globalThis.DOMParser=old;
+ const data=await importPodcastRSS('https://example.com/feed.xml',{storage,fetcher:async()=>({ok:true,text:async()=>fakeXml})});const again=await importPodcastRSS('https://example.com/feed.xml',{storage,fetcher:async()=>({ok:true,text:async()=>fakeXml})});assert.equal(again.id,data.id);assert.equal(Object.values(JSON.parse(storage.getItem('stock-podcast-custom-v1'))).length,1);assert.equal(data.title,'Any Channel');assert.equal(podcastChannels(storage).some(c=>c.feed==='https://example.com/feed.xml'),true);globalThis.DOMParser=old;
 });
 
 
@@ -139,4 +139,10 @@ test('day Podcast count includes saved summaries without double-counting importe
  const mentions=[{record:{id:'podcast:ep-1199',date:'2026-10-08',title:'EP1199｜台積電'}},{record:{id:'podcast:ep-1200',date:'2026-10-08',title:'EP1200｜封關'}}];
  assert.equal(countPodcastDayEntries('2026-10-08',episodes,mentions),2);
  assert.equal(countPodcastDayEntries('2026-10-09',episodes,mentions),0);
+});
+
+test('channel identity folds legacy RSS aliases but keeps different shows with the same name',async()=>{
+ const {dedupePodcastChannels}=await import('../shared/podcast-identity.js');
+ const rows=dedupePodcastChannels([{id:'one',title:'節目',feed:'https://feeds.soundcloud.com/users/soundcloud:users:735679489/sounds.rss'},{id:'two',title:'節目',feed:'https://feeds.soundcloud.com/users/soundcloud%3Ausers%3A735679489/sounds.rss/'},{id:'other',title:'節目',feed:'https://other.example/feed'}]);assert.equal(rows.length,2);assert.deepEqual(rows[0].aliases,['two']);
+ const overlapping=dedupePodcastChannels([{id:'old',title:'節目',feed:'https://old.example/rss',episode_keys:['audio1','audio2']},{id:'new',title:'節目',feed:'https://new.example/rss',episode_keys:['audio1','audio2','audio3']}]);assert.equal(overlapping.length,1);assert.deepEqual(overlapping[0].aliases,['new']);
 });
