@@ -1231,10 +1231,9 @@ async function managementRoute(req, env, { sql, reply, randomToken: randomToken2
     return reply({ ok: true });
   }
   if (path === "/features" && req.method === "GET") {
-    if (!user) return reply({ error: "\u8ACB\u5148\u767B\u5165" }, 401);
     await ensureTables(sql);
     const flags = await sql("SELECT feature_key,enabled FROM feature_flags").all();
-    const overrides = await sql("SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?", user.id).all();
+    const overrides = user ? await sql("SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?", user.id).all() : { results: [] };
     return reply({ features: effectiveFlags(flags.results, overrides.results) });
   }
   if (!path.startsWith("/management")) return null;
@@ -1677,7 +1676,7 @@ var index_default = { async fetch(req, env) {
       await sql("INSERT INTO managed_users(user_id,first_login_at,last_login_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET last_login_at=excluded.last_login_at", identity.sub, Date.now(), Date.now()).run();
       return new Response(null, { status: 302, headers: { Location: appURL.href + "#session=" + token2, "Set-Cookie": "oauth_state=; Secure; HttpOnly; SameSite=Lax; Max-Age=0; Path=/auth", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
     }
-    const managementAuth = await managementRoute(req, env, { sql, reply, randomToken });
+    const managementAuth = path === "/features" && req.headers.get("Authorization") ? null : await managementRoute(req, env, { sql, reply, randomToken });
     if (managementAuth) return managementAuth;
     if (path.startsWith("/admin/")) {
       const provided = req.headers.get("Authorization") || "";

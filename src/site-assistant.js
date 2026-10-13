@@ -10,6 +10,8 @@ import {assistantSources,findAssistantCompany} from './assistant-sources.js';
 import './site-assistant.css';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safe=s=>{try{const u=new URL(s);return u.protocol==='https:'?u.href:'';}catch{return '';}};
+let updateAvailability=()=>{};
+export function setSiteAssistantEnabled(enabled){updateAvailability(enabled);}
 export function installSiteAssistant(getContext){
  if(document.querySelector('#site-assistant-launch'))return;
  const launch=document.createElement('button');launch.id='site-assistant-launch';launch.className='site-assistant-launch';launch.textContent='AI 小助手';launch.setAttribute('aria-expanded','false');
@@ -60,11 +62,13 @@ export function installSiteAssistant(getContext){
  el('#assistant-thread-search').oninput=drawThreads;
  drawThreads();
  const guide=(card,context,stocks,news,sources)=>{const names=stocks.map(c=>c.name.replace(/[＊*]+$/,'')),unprepared=(context.episodes||[]).filter(e=>{const r=context.records.find(r=>r.id==='podcast:'+e.id);return !(r?.text&&r?.answer&&!r.partial);}),suggestions=unprepared.filter(e=>names.some(n=>(e.title+' '+(e.description||'')).includes(n))||e.date===context.date).slice(0,3),newsRows=news.filter(n=>stocks.some(c=>c.code===n.company_code));const box=document.createElement('section');box.className='site-assistant-guide';box.innerHTML='<strong>補齊資料後可繼續追問</strong><p>目前來源共 '+sources.filter(s=>s.kind==='新聞').length+' 則新聞、'+sources.filter(s=>s.kind==='Podcast').length+' 集 Podcast。只有標題或部分逐字稿時，結論會受限。</p>'+(newsRows.some(n=>!n.article_summary)?'<button data-prepare-news>讀取個股新聞全文並整理</button>':'')+'<button data-queue>選擇 Podcast 集數／查看處理進度</button>'+suggestions.map((e,i)=>'<p>'+esc(e.date)+' · '+esc(e.title)+'<br><small>待整理候選，尚未確認逐字稿是否提及此股。</small><button data-prepare-episode="'+i+'">開啟此集，取得逐字稿並總結</button></p>').join('')+'<p>已搜尋所有已收錄新聞；未收錄或尚未整理的內容需先補齊。</p>';card.append(box);box.querySelector('[data-prepare-news]')?.addEventListener('click',()=>openAINews({rows:newsRows,title:names.join('、')+' 新聞整理'}));box.querySelector('[data-queue]').onclick=()=>document.querySelector('#open-podcast-queue-sidebar')?.click();box.querySelectorAll('[data-prepare-episode]').forEach(b=>b.onclick=()=>openPodcastEpisode(suggestions[Number(b.dataset.prepareEpisode)],{userId:context.userId}));};
- const toggle=()=>{panel.hidden=!panel.hidden;launch.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden){if(chatOwner!==getContext().userId)reset();launch.textContent='AI 小助手';el('textarea').focus();}};
+ let enabled=true;
+ updateAvailability=value=>{enabled=value;launch.hidden=!enabled;if(!enabled){stopRequest();panel.hidden=true;launch.setAttribute('aria-expanded','false');}};
+ const toggle=()=>{if(!enabled)return;panel.hidden=!panel.hidden;launch.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden){if(chatOwner!==getContext().userId)reset();launch.textContent='AI 小助手';el('textarea').focus();}};
  launch.onclick=toggle;el('[data-close]').onclick=toggle;el('[data-settings]').onclick=()=>openAIWindow();
  el('[data-cancel]').onclick=()=>controller?.abort();
  el('form').onsubmit=async event=>{
- event.preventDefault();if(controller)return;const question=el('textarea').value.trim();if(!question)return;
+ event.preventDefault();if(!enabled||controller)return;const question=el('textarea').value.trim();if(!question)return;
  if(chatOwner!==getContext().userId)reset();historyVersion++;el('[data-history]').removeAttribute('aria-busy');el('[data-earlier]')?.remove();const userMessage=addMessage('user',question),card=addMessage('assistant','正在搜尋網站資料…');el('textarea').value='';el('[data-history]').scrollTop=el('[data-history]').scrollHeight;
  conversation.push({question,answer:'',sources:[]});persist();const own=new AbortController();controller=own;drawThreads();const submit=el('[type=submit]');submit.disabled=true;el('[data-cancel]').hidden=false;status('正在搜尋網站資料…');
  const timer=setTimeout(()=>own.abort(),120000);const assertCurrent=()=>{if(controller!==own||chatOwner!==getContext().userId){own.abort();own.signal.throwIfAborted();}own.signal.throwIfAborted();};

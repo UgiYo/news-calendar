@@ -5,6 +5,18 @@ import {readFileSync} from 'node:fs';
 import worker,{hash,verifyGoogle,extractArticleBody,checkedArticleURL,normalizeArticleURL,readArticleURL,parseCompanyProfile} from '../worker/index.js';
 function setup(){const db=new DatabaseSync(':memory:');db.exec(readFileSync(new URL('../worker/migrations/0001_init.sql',import.meta.url),'utf8'));const adapter={prepare(q){return {bind(...args){const s=db.prepare(q);return {async first(){return s.get(...args)||null},async all(){return {results:s.all(...args)}},async run(){return s.run(...args)}}}}},async batch(list){return Promise.all(list.map(x=>x.run()))}};return {db,env:{DB:adapter,APP_URL:'https://example.com/',GOOGLE_CLIENT_ID:'client',COLLECTOR_SECRET:'secret',GITHUB_REPO:'owner/repo'}};}
 async function call(env,path,token,body,method){return worker.fetch(new Request('https://worker.example'+path,{method:method||(body?'POST':'GET'),headers:token?{Authorization:'Bearer '+token}:{},body:body?JSON.stringify(body):undefined}),env);}
+test('feature endpoint applies global flags for guests and personal overrides after authentication',async()=>{
+ const {db,env}=setup();
+ db.prepare('INSERT INTO users VALUES(?,?)').run('alice','alice@example.com');
+ db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(await hash('alice'),'alice',Date.now()+60000);
+ assert.equal((await call(env,'/features')).status,200);
+ db.exec("INSERT INTO feature_flags VALUES('ai_tools.assistant',0,0);INSERT INTO user_feature_overrides VALUES('alice','ai_tools.assistant',1,0);");
+ const guest=await (await call(env,'/features')).json();assert.equal(guest.features['ai_tools.assistant'],false);
+ const user=await call(env,'/features','alice');assert.equal(user.status,200);assert.equal((await user.json()).features['ai_tools.assistant'],true);
+ assert.equal((await call(env,'/features','invalid')).status,401);
+ db.exec("DELETE FROM user_feature_overrides;");assert.equal((await (await call(env,'/features','alice')).json()).features['ai_tools.assistant'],false);
+ db.close();
+});
 test('collection triggers audit authenticated actors, shared tasks and reuse without leaking identity',async()=>{
  const {db,env}=setup(),original=globalThis.fetch,dispatches=[];
  env.GITHUB_DISPATCH_TOKEN='fixture-dispatch';

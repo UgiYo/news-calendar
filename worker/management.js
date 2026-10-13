@@ -45,10 +45,9 @@ export async function managementRoute(req,env,{sql,reply,randomToken,user}){
   const token=tokenOf(req);if(token)await sql('DELETE FROM admin_sessions WHERE token_hash=?',await hash(token)).run();return reply({ok:true});
  }
  if(path==='/features'&&req.method==='GET'){
-  if(!user)return reply({error:'請先登入'},401);
   await ensureTables(sql);
   const flags=await sql('SELECT feature_key,enabled FROM feature_flags').all();
-  const overrides=await sql('SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?',user.id).all();
+  const overrides=user?await sql('SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?',user.id).all():{results:[]};
   return reply({features:effectiveFlags(flags.results,overrides.results)});
  }
  if(!path.startsWith('/management'))return null;
