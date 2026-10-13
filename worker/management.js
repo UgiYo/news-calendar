@@ -1,3 +1,4 @@
+import {topologyRoute} from './industry-topology.js';
 const FEATURE_TREE=[
  {key:'markets',label:'股票市場顯示',children:[{key:'markets.tw',label:'台股市場（搜尋、追蹤與市場頁面）'},{key:'markets.us',label:'美股市場（搜尋、追蹤與市場頁面）'}]},
  {key:'news_calendar',label:'新聞月曆',children:[
@@ -9,8 +10,10 @@ const FEATURE_TREE=[
  {key:'market_watch',label:'市場觀察',children:[
   {key:'market_watch.turnover',label:'成交值排行與產業趨勢'},
   {key:'market_watch.observation',label:'優先觀察股與價值鏈'},
-  {key:'market_watch.stock_events',label:'個股異動追查'}
+  {key:'market_watch.stock_events',label:'個股異動追查'},
+  {key:'market_watch.topology',label:'台美產業關聯圖'}
  ]},
+ {key:'topology',label:'產業關聯內容',children:[{key:'topology.company_relations',label:'公司供應／合作／競爭關係'},{key:'topology.pending',label:'允許檢視待確認關係'},{key:'topology.events',label:'關聯新聞與 Podcast'},{key:'topology.analysis',label:'AI 事件傳導分析'}]},
  {key:'stock_tools',label:'個股工具',children:[
   {key:'stock_tools.candles',label:'K 線'},
   {key:'stock_tools.broker_reports',label:'券商報告'},
@@ -24,6 +27,7 @@ const FEATURE_TREE=[
  ]}
 ];
 const FEATURE_DESCRIPTIONS={"markets.tw": "台股搜尋、追蹤清單及市場切換；關閉後可自動切至美股。", "markets.us": "美股搜尋、追蹤清單及市場切換；關閉後可自動切至台股。", "news_calendar.news": "股票新聞、日期新聞與摘要入口；不連帶隱藏 Podcast 日曆。", "news_calendar.podcast": "Podcast 日曆、頻道篩選、提及追蹤股與節目入口。", "news_calendar.collect": "立即更新新聞按鈕；不修改每日收集排程。", "news_calendar.podcast_import": "匯入 Podcast 頻道入口；已匯入節目保留。", "market_watch.turnover": "台股成交值排行頁面與產業趨勢；美股不提供此排行。", "market_watch.observation": "優先觀察股與價值鏈畫面。", "market_watch.stock_events": "個股異動追查區塊。", "stock_tools.candles": "K 線入口，涵蓋均線、方向箭頭與支撐壓力。", "stock_tools.broker_reports": "公開券商報告；與券商庫存分開控制。", "stock_tools.holdings": "券商庫存匯入／檢視入口；不刪除裝置庫存。", "stock_tools.company_profile": "公司財務參考區塊及其分析按鈕。", "ai_tools.assistant": "浮動 AI 小助手與對話入口。", "ai_tools.results": "AI 成果中心及通知入口；既有成果保留。", "ai_tools.settings": "AI 設定入口；不更動使用者 API 金鑰或模型。"};
+Object.assign(FEATURE_DESCRIPTIONS,{'market_watch.topology':'產業關聯頁籤與資料 API；關閉後不提供拓撲資料。','topology.company_relations':'公司間已建檔的供應、合作及競爭關係。','topology.pending':'允許使用者主動展開待確認關係，預設不顯示。','topology.events':'選定產業或公司的既有新聞與 Podcast。','topology.analysis':'依使用者個人 AI 設定分析可能傳導路徑，需主動點擊並產生用量。'});
 for(const parent of FEATURE_TREE)for(const child of parent.children)child.description=FEATURE_DESCRIPTIONS[child.key];
 const ALL_KEYS=FEATURE_TREE.flatMap(x=>[x.key,...x.children.map(y=>y.key)]);
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -58,12 +62,17 @@ export async function managementRoute(req,env,{sql,reply,randomToken,user}){
   const overrides=user?await sql('SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?',user.id).all():{results:[]};
   return reply({features:effectiveFlags(flags.results,overrides.results)});
  }
+ if(['/industry-topology','/industry-topology/news'].includes(path)){
+  await ensureTables(sql);const flags=await sql('SELECT feature_key,enabled FROM feature_flags').all();const overrides=user?await sql('SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?',user.id).all():{results:[]};
+  return topologyRoute(req,{sql,reply,flags:effectiveFlags(flags.results,overrides.results)});
+ }
  if(!path.startsWith('/management'))return null;
  const token=tokenOf(req);if(!token)return reply({error:'管理者尚未登入'},401);
  await sql('CREATE TABLE IF NOT EXISTS admin_sessions (token_hash TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)').run();
  const session=await sql('SELECT expires_at FROM admin_sessions WHERE token_hash=? AND expires_at>?',await hash(token),Date.now()).first();
  if(!session)return reply({error:'管理者登入已過期，請重新登入'},401);
  await ensureTables(sql);
+ const topology=await topologyRoute(req,{sql,reply,management:true});if(topology)return topology;
  if(path==='/management'&&req.method==='GET'){
   const [flags,users,overrides]=await Promise.all([
    sql('SELECT feature_key,enabled FROM feature_flags').all(),

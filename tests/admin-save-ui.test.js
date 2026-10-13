@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {build} from 'esbuild';
 import {parseHTML} from 'linkedom';
+import {INITIAL_TOPOLOGY} from '../shared/industry-topology.js';
 test('admin saves show a popup and keep the success message; failed saves do not report success',async()=>{
  const {window,document}=parseHTML('<html><body><div id="app"></div></body></html>');
  globalThis.window=window;globalThis.document=document;
@@ -12,9 +13,10 @@ test('admin saves show a popup and keep the success message; failed saves do not
  window.alert=text=>notices.push(text);let fail=false;
  globalThis.fetch=async(url,options)=>{
   if(options.method==='PUT'&&fail)return Response.json({error:'儲存失敗'},{status:500});
+  if(String(url).endsWith('/management/topology')&&options.method==='GET')return Response.json({document:INITIAL_TOPOLOGY,revision:0});
   return Response.json(options.method==='GET'?model:{ok:true});
  };
- const result=await build({stdin:{contents:readFileSync('src/admin.js','utf8'),resolveDir:process.cwd()},bundle:true,platform:'node',format:'esm',write:false,define:{'import.meta.env':JSON.stringify({VITE_WORKER_API_URL:'https://api.test'})}});
+ const result=await build({stdin:{contents:readFileSync('src/admin.js','utf8'),resolveDir:new URL('../src/',import.meta.url).pathname},bundle:true,platform:'node',format:'esm',write:false,define:{'import.meta.env':JSON.stringify({VITE_WORKER_API_URL:'https://api.test'})}});
  await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
  const wait=async predicate=>{for(let i=0;i<30&&!predicate();i++)await new Promise(resolve=>setTimeout(resolve,5));assert.ok(predicate());};
  await wait(()=>document.querySelector('#save-global'));
