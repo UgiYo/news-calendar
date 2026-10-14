@@ -46,9 +46,9 @@ try{
  mod.state.query='NVDA';await mod.search();assert.ok(calls.some(p=>p.includes('/prices?code=US%3ANVDA')));assert.equal(mod.state.selected,'US:NVDA');
  await mod.openRankingStock('US:NVDA');assert.ok(document.querySelector('#stock-ranking-title').textContent.includes('美股走勢（USD）'));assert.equal(document.querySelector('[data-candle-period="1m"]'),null);assert.ok(document.querySelector('[data-candle-period="day"]'));
  const adjustedToggle=document.querySelector('#toggle-adjusted-candles');adjustedToggle.checked=true;adjustedToggle.dispatchEvent(new window.Event('change'));
- for(let i=0;i<60&&!document.querySelector('.candle-adjustment-control strong')?.textContent.includes('還原 K');i++)await new Promise(r=>setTimeout(r,5));
- assert.ok(document.querySelector('.candle-adjustment-control strong').textContent.includes('還原 K'));assert.match(document.querySelector('#candle-quote').textContent,/收 90.00/);assert.ok(calls.some(p=>p.startsWith('/adjusted-prices?code=US%3ANVDA')));
- featureFlags={'stock_tools.adjusted_candles':false};await mod.refreshFeatures();await Promise.resolve();assert.ok(document.querySelector('.candle-adjustment-control strong').textContent.includes('原始 K'));assert.equal(document.querySelector('.candle-adjustment-control').getAttribute('data-feature-disabled'),'true');featureFlags={};await mod.refreshFeatures();
+ for(let i=0;i<60&&!document.querySelector('.candle-adjustment-note strong')?.textContent.includes('還原 K');i++)await new Promise(r=>setTimeout(r,5));
+ assert.ok(document.querySelector('.candle-adjustment-note strong').textContent.includes('還原 K'));assert.match(document.querySelector('#candle-quote').textContent,/收 90.00/);assert.ok(calls.some(p=>p.startsWith('/adjusted-prices?code=US%3ANVDA')));
+ featureFlags={'stock_tools.adjusted_candles':false};await mod.refreshFeatures();await Promise.resolve();assert.ok(document.querySelector('.candle-adjustment-note strong').textContent.includes('原始 K'));assert.equal(document.querySelector('.candle-adjustment-control').getAttribute('data-feature-disabled'),'true');assert.equal(document.querySelector('.candle-adjustment-note').getAttribute('data-feature-disabled'),'true');featureFlags={};await mod.refreshFeatures();
  document.querySelector('#close-stock-ranking').click();await mod.switchMarket('TW');assert.equal(document.querySelector('#ranking-tab').hidden,false);
  document.querySelector('#topology-tab').click();
  for(let i=0;i<60&&!document.querySelector('#topology-tab-panel .topology-svg');i++)await new Promise(r=>setTimeout(r,5));
