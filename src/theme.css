@@ -1,10 +1,10 @@
 /* Light theme retains each component's original colour fallback. */
-:root{color-scheme:light}
+:root{color-scheme:light;--theme-on-accent:#fff}
 :root[data-theme="dark"]{
  color-scheme:dark;
  --theme-page:#0c1520;--theme-surface:#152230;--theme-surface-muted:#1b2c3b;--theme-surface-raised:#273b4c;
  --theme-text:#e7eff6;--theme-text-secondary:#b0c2d1;--theme-border:#395062;--theme-border-strong:#62798a;
- --theme-accent:#65d8d1;--theme-accent-surface:#153e43;
+ --theme-accent:#65d8d1;--theme-accent-surface:#153e43;--theme-on-accent:#0c1520;
  --theme-info:#91bfff;--theme-info-surface:#203952;
  --theme-warm:#ffc785;--theme-warm-surface:#46331e;
  --theme-success:#74dfae;--theme-success-surface:#163c32;
