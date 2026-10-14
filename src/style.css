@@ -210,3 +210,5 @@ aside>.podcast-controls{margin-top:24px;padding-top:16px;border-top:1px solid va
 .candle-panel .candle-ma-values{flex-direction:row;flex-wrap:wrap;gap:6px 16px}
 .candle-panel .candle-ma-values>span{white-space:nowrap}
 @media(max-width:600px){.ma-controls .ma-custom-periods{flex:1 1 100%}.ma-controls .ma-period-toggles{flex-basis:100%}.candle-panel .candle-ma-values{gap:6px 12px}}
+
+.candle-adjustment-control{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;margin:10px 0;border:1px solid var(--theme-border,#dae2ed);border-radius:10px;background:var(--theme-surface-muted,#f3f6fa)}.candle-adjustment-control small,.candle-adjustment-control p{flex-basis:100%;margin:0;line-height:1.6}.candle-adjustment-control strong{font-size:.85rem}
