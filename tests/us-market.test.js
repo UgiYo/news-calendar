@@ -82,7 +82,7 @@ test('US event route rejects mixed markets and searches both English news and SE
 });
 test('US candle controls offer daily/weekly/monthly with USD and share units',()=>{
  const html=candlePanel({code:'US:NVDA',prices:[{code:'US:NVDA',date:'2026-10-08',open:100,high:102,low:99,close:101,volume:1500}]});
- assert.match(html,/USD 美元/);assert.match(html,/data-candle-period="week"/);assert.doesNotMatch(html,/data-candle-period="1m"/);assert.doesNotMatch(html,/1.5 張/);assert.match(html,/原始 OHLC/);
+ assert.match(html,/USD 美元/);assert.match(html,/data-candle-period="week"/);assert.doesNotMatch(html,/data-candle-period="1m"/);assert.doesNotMatch(html,/1.5 張/);assert.match(html,/原始 K · 來源行情/);assert.match(html,/id="toggle-adjusted-candles"/);
 });
 
 test('authenticated API isolates US news and accepts same-account cross-device news sync',async()=>{

@@ -1331,6 +1331,69 @@ async function summaryCacheRoute(req, { sql, reply, user, randomToken: randomTok
   return row ? reply({ ok: true }) : reply({ error: "Cache lease expired" }, 409);
 }
 
+// shared/adjusted-candles.js
+function adjustedDailyPrices(rows = []) {
+  const valid = rows.filter((p) => [p.open, p.high, p.low, p.close].every((v) => Number.isFinite(v) && v > 0) && p.low <= Math.min(p.open, p.close) && p.high >= Math.max(p.open, p.close)).sort((a, b) => a.date.localeCompare(b.date));
+  if (!valid.length) throw Error("\u5C1A\u7121\u53EF\u9084\u539F\u7684\u65E5 K \u8CC7\u6599");
+  if (valid.some((p) => !Number.isFinite(p.adjusted_close) || p.adjusted_close <= 0)) throw Error("\u8ABF\u6574\u5F8C\u6536\u76E4\u50F9\u4E0D\u5B8C\u6574\uFF0C\u7121\u6CD5\u9084\u539F K \u7DDA\uFF1B\u8ACB\u66F4\u65B0\u8CC7\u6599\u5F8C\u91CD\u8A66\u3002");
+  const latest = valid.at(-1), anchor = latest.adjusted_close / latest.close;
+  return valid.map((p) => {
+    const factor = p.adjusted_close / p.close / anchor;
+    if (!Number.isFinite(factor) || factor <= 0) throw Error("\u9084\u539F\u56E0\u5B50\u683C\u5F0F\u932F\u8AA4");
+    const price = Object.fromEntries(["open", "high", "low", "close"].map((k) => [k, p[k] * factor]));
+    if (Object.values(price).some((v) => !Number.isFinite(v) || v <= 0)) throw Error("\u9084\u539F\u50F9\u683C\u8D85\u51FA\u7BC4\u570D");
+    return { ...p, ...price, adjustment_factor: factor };
+  });
+}
+
+// worker/adjusted-prices.js
+function adjustmentSnapshot(result, code, now = /* @__PURE__ */ new Date()) {
+  const quote = result.indicators?.quote?.[0], adj = result.indicators?.adjclose?.[0]?.adjclose, cutoff = isUS(code) ? completedMarketDay(now, "US") : marketDay(now, "TW");
+  const rows = (result.timestamp || []).flatMap((t, i) => {
+    const date = marketDay(new Date(t * 1e3), isUS(code) ? "US" : "TW"), [open, high, low, close] = ["open", "high", "low", "close"].map((k) => quote?.[k]?.[i]);
+    if (date > cutoff || ![open, high, low, close].every((v) => Number.isFinite(v) && v > 0) || low > Math.min(open, close) || high < Math.max(open, close)) return [];
+    return [{ code, date, open, high, low, close, volume: Number.isFinite(quote?.volume?.[i]) ? quote.volume[i] : null, adjusted_close: adj?.[i] ?? null }];
+  });
+  adjustedDailyPrices(rows);
+  return rows;
+}
+async function fetchAdjustmentSnapshot(code, company2, fetcher = fetch, now = /* @__PURE__ */ new Date()) {
+  const symbol = isUS(code) ? symbolOf(code).replaceAll(".", "-") : code + (company2.market === "\u4E0A\u6AC3" ? ".TWO" : ".TW");
+  let lastError;
+  for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) try {
+    const r = await fetcher(`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2y&includePrePost=false&includeAdjustedClose=true&events=div%2Csplits`, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }, signal: AbortSignal.timeout(1e4) });
+    if (!r.ok) throw Error("\u884C\u60C5 HTTP " + r.status);
+    const result = (await r.json()).chart?.result?.[0];
+    if (result?.meta?.symbol?.toUpperCase() !== symbol.toUpperCase()) throw Error("\u9084\u539F\u884C\u60C5\u4EE3\u865F\u4E0D\u7B26");
+    return { prices: adjustmentSnapshot(result, code, now), source: "Yahoo Finance", adjustment: "forward", basis: "provider-ohlc", asOf: now.toISOString() };
+  } catch (e) {
+    lastError = e;
+  }
+  throw Error("\u9084\u539F K \u8CC7\u6599\u66AB\u6642\u7121\u6CD5\u53D6\u5F97\uFF1A" + (lastError?.message || "\u4F86\u6E90\u672A\u63D0\u4F9B\u8ABF\u6574\u8CC7\u6599"));
+}
+async function adjustedPricesRoute(req, env, { sql, reply, user, effectiveFeatureSettings: effectiveFeatureSettings2 }) {
+  const url = new URL(req.url);
+  if (url.pathname !== "/adjusted-prices") return null;
+  if (!["GET", "POST"].includes(req.method)) return reply({ error: "Method not allowed" }, 405);
+  const code = url.searchParams.get("code");
+  if (!validStockCode(code)) return reply({ error: "\u80A1\u7968\u4EE3\u865F\u683C\u5F0F\u932F\u8AA4" }, 400);
+  const flags = await effectiveFeatureSettings2(sql, user);
+  if (flags["stock_tools.adjusted_candles"] === false || flags["stock_tools.candles"] === false || flags["markets." + (isUS(code) ? "us" : "tw")] === false) return reply({ error: "\u9084\u539F K \u529F\u80FD\u6216\u5E02\u5834\u76EE\u524D\u672A\u958B\u653E" }, 403);
+  const company2 = isUS(code) ? null : await sql("SELECT * FROM companies WHERE code=?", code).first();
+  if (!isUS(code) && !company2) return reply({ error: "\u516C\u53F8\u4E0D\u5B58\u5728" }, 404);
+  await sql("CREATE TABLE IF NOT EXISTS adjusted_price_snapshots(code TEXT PRIMARY KEY,payload TEXT NOT NULL,updated_at INTEGER NOT NULL)").run();
+  const stored = await sql("SELECT payload,updated_at FROM adjusted_price_snapshots WHERE code=?", code).first();
+  const today = marketDay(/* @__PURE__ */ new Date(), isUS(code) ? "US" : "TW"), fresh = stored && Date.now() - stored.updated_at < 864e5 && marketDay(new Date(stored.updated_at), isUS(code) ? "US" : "TW") === today;
+  if (req.method === "GET" && fresh) return reply({ ...JSON.parse(stored.payload), cached: true });
+  try {
+    const result = await fetchAdjustmentSnapshot(code, company2);
+    await sql("INSERT INTO adjusted_price_snapshots(code,payload,updated_at) VALUES(?,?,?) ON CONFLICT(code) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at", code, JSON.stringify(result), Date.now()).run();
+    return reply({ ...result, cached: false });
+  } catch (e) {
+    return stored ? reply({ ...JSON.parse(stored.payload), cached: true, stale: true, warning: e.message + "\uFF1B\u76EE\u524D\u4FDD\u7559\u5148\u524D\u9084\u539F\u8CC7\u6599\uFF0C\u8ACB\u7A0D\u5F8C\u66F4\u65B0\u3002" }) : reply({ error: e.message }, 502);
+  }
+}
+
 // shared/industry-topology.js
 var node = (id, chain, label, level, source) => ({ id, chain, label, level, source, enabled: true });
 var company = (code, name, nodes, source) => ({ code, name, nodes, source, enabled: true });
@@ -1464,6 +1527,7 @@ var FEATURE_TREE = [
   { key: "topology", label: "\u7522\u696D\u95DC\u806F\u5167\u5BB9", children: [{ key: "topology.company_relations", label: "\u516C\u53F8\u4F9B\u61C9\uFF0F\u5408\u4F5C\uFF0F\u7AF6\u722D\u95DC\u4FC2" }, { key: "topology.pending", label: "\u5141\u8A31\u6AA2\u8996\u5F85\u78BA\u8A8D\u95DC\u4FC2" }, { key: "topology.events", label: "\u95DC\u806F\u65B0\u805E\u8207 Podcast" }, { key: "topology.analysis", label: "AI \u4E8B\u4EF6\u50B3\u5C0E\u5206\u6790" }] },
   { key: "stock_tools", label: "\u500B\u80A1\u5DE5\u5177", children: [
     { key: "stock_tools.candles", label: "K \u7DDA" },
+    { key: "stock_tools.adjusted_candles", label: "\u9084\u539F K\uFF08\u53F0\u80A1\uFF0F\u7F8E\u80A1\u65E5\u9031\u6708\uFF09" },
     { key: "stock_tools.broker_reports", label: "\u5238\u5546\u5831\u544A" },
     { key: "stock_tools.holdings", label: "\u5238\u5546\u5EAB\u5B58" },
     { key: "stock_tools.company_profile", label: "\u516C\u53F8\u8CA1\u52D9\u53C3\u8003" }
@@ -1475,7 +1539,7 @@ var FEATURE_TREE = [
   ] }
 ];
 var FEATURE_DESCRIPTIONS = { "markets.tw": "\u53F0\u80A1\u641C\u5C0B\u3001\u8FFD\u8E64\u6E05\u55AE\u53CA\u5E02\u5834\u5207\u63DB\uFF1B\u95DC\u9589\u5F8C\u53EF\u81EA\u52D5\u5207\u81F3\u7F8E\u80A1\u3002", "markets.us": "\u7F8E\u80A1\u641C\u5C0B\u3001\u8FFD\u8E64\u6E05\u55AE\u53CA\u5E02\u5834\u5207\u63DB\uFF1B\u95DC\u9589\u5F8C\u53EF\u81EA\u52D5\u5207\u81F3\u53F0\u80A1\u3002", "news_calendar.news": "\u80A1\u7968\u65B0\u805E\u3001\u65E5\u671F\u65B0\u805E\u8207\u6458\u8981\u5165\u53E3\uFF1B\u4E0D\u9023\u5E36\u96B1\u85CF Podcast \u65E5\u66C6\u3002", "news_calendar.podcast": "Podcast \u65E5\u66C6\u3001\u983B\u9053\u7BE9\u9078\u3001\u63D0\u53CA\u8FFD\u8E64\u80A1\u8207\u7BC0\u76EE\u5165\u53E3\u3002", "news_calendar.collect": "\u7ACB\u5373\u66F4\u65B0\u65B0\u805E\u6309\u9215\uFF1B\u4E0D\u4FEE\u6539\u6BCF\u65E5\u6536\u96C6\u6392\u7A0B\u3002", "news_calendar.podcast_import": "\u532F\u5165 Podcast \u983B\u9053\u5165\u53E3\uFF1B\u5DF2\u532F\u5165\u7BC0\u76EE\u4FDD\u7559\u3002", "market_watch.turnover": "\u53F0\u80A1\u6210\u4EA4\u503C\u6392\u884C\u9801\u9762\u8207\u7522\u696D\u8DA8\u52E2\uFF1B\u7F8E\u80A1\u4E0D\u63D0\u4F9B\u6B64\u6392\u884C\u3002", "market_watch.observation": "\u512A\u5148\u89C0\u5BDF\u80A1\u8207\u50F9\u503C\u93C8\u756B\u9762\u3002", "market_watch.stock_events": "\u500B\u80A1\u7570\u52D5\u8FFD\u67E5\u5340\u584A\u3002", "stock_tools.candles": "K \u7DDA\u5165\u53E3\uFF0C\u6DB5\u84CB\u5747\u7DDA\u3001\u65B9\u5411\u7BAD\u982D\u8207\u652F\u6490\u58D3\u529B\u3002", "stock_tools.broker_reports": "\u516C\u958B\u5238\u5546\u5831\u544A\uFF1B\u8207\u5238\u5546\u5EAB\u5B58\u5206\u958B\u63A7\u5236\u3002", "stock_tools.holdings": "\u5238\u5546\u5EAB\u5B58\u532F\u5165\uFF0F\u6AA2\u8996\u5165\u53E3\uFF1B\u4E0D\u522A\u9664\u88DD\u7F6E\u5EAB\u5B58\u3002", "stock_tools.company_profile": "\u516C\u53F8\u8CA1\u52D9\u53C3\u8003\u5340\u584A\u53CA\u5176\u5206\u6790\u6309\u9215\u3002", "ai_tools.assistant": "\u6D6E\u52D5 AI \u5C0F\u52A9\u624B\u8207\u5C0D\u8A71\u5165\u53E3\u3002", "ai_tools.results": "AI \u6210\u679C\u4E2D\u5FC3\u53CA\u901A\u77E5\u5165\u53E3\uFF1B\u65E2\u6709\u6210\u679C\u4FDD\u7559\u3002", "ai_tools.settings": "AI \u8A2D\u5B9A\u5165\u53E3\uFF1B\u4E0D\u66F4\u52D5\u4F7F\u7528\u8005 API \u91D1\u9470\u6216\u6A21\u578B\u3002" };
-Object.assign(FEATURE_DESCRIPTIONS, { "market_watch.topology": "\u7522\u696D\u95DC\u806F\u9801\u7C64\u8207\u8CC7\u6599 API\uFF1B\u95DC\u9589\u5F8C\u4E0D\u63D0\u4F9B\u62D3\u64B2\u8CC7\u6599\u3002", "topology.company_relations": "\u516C\u53F8\u9593\u5DF2\u5EFA\u6A94\u7684\u4F9B\u61C9\u3001\u5408\u4F5C\u53CA\u7AF6\u722D\u95DC\u4FC2\u3002", "topology.pending": "\u5141\u8A31\u4F7F\u7528\u8005\u4E3B\u52D5\u5C55\u958B\u5F85\u78BA\u8A8D\u95DC\u4FC2\uFF0C\u9810\u8A2D\u4E0D\u986F\u793A\u3002", "topology.events": "\u9078\u5B9A\u7522\u696D\u6216\u516C\u53F8\u7684\u65E2\u6709\u65B0\u805E\u8207 Podcast\u3002", "topology.analysis": "\u4F9D\u4F7F\u7528\u8005\u500B\u4EBA AI \u8A2D\u5B9A\u5206\u6790\u53EF\u80FD\u50B3\u5C0E\u8DEF\u5F91\uFF0C\u9700\u4E3B\u52D5\u9EDE\u64CA\u4E26\u7522\u751F\u7528\u91CF\u3002" });
+Object.assign(FEATURE_DESCRIPTIONS, { "stock_tools.adjusted_candles": "\u9664\u6B0A\u606F\uFF0F\u62C6\u80A1\u8ABF\u6574\u65E5\u9031\u6708 K \u5165\u53E3\u8207 API\uFF1B\u5206\u9418 K \u4FDD\u6301\u4F86\u6E90\u884C\u60C5\u3002", "market_watch.topology": "\u7522\u696D\u95DC\u806F\u9801\u7C64\u8207\u8CC7\u6599 API\uFF1B\u95DC\u9589\u5F8C\u4E0D\u63D0\u4F9B\u62D3\u64B2\u8CC7\u6599\u3002", "topology.company_relations": "\u516C\u53F8\u9593\u5DF2\u5EFA\u6A94\u7684\u4F9B\u61C9\u3001\u5408\u4F5C\u53CA\u7AF6\u722D\u95DC\u4FC2\u3002", "topology.pending": "\u5141\u8A31\u4F7F\u7528\u8005\u4E3B\u52D5\u5C55\u958B\u5F85\u78BA\u8A8D\u95DC\u4FC2\uFF0C\u9810\u8A2D\u4E0D\u986F\u793A\u3002", "topology.events": "\u9078\u5B9A\u7522\u696D\u6216\u516C\u53F8\u7684\u65E2\u6709\u65B0\u805E\u8207 Podcast\u3002", "topology.analysis": "\u4F9D\u4F7F\u7528\u8005\u500B\u4EBA AI \u8A2D\u5B9A\u5206\u6790\u53EF\u80FD\u50B3\u5C0E\u8DEF\u5F91\uFF0C\u9700\u4E3B\u52D5\u9EDE\u64CA\u4E26\u7522\u751F\u7528\u91CF\u3002" });
 for (const parent of FEATURE_TREE) for (const child of parent.children) child.description = FEATURE_DESCRIPTIONS[child.key];
 var ALL_KEYS = FEATURE_TREE.flatMap((x) => [x.key, ...x.children.map((y) => y.key)]);
 var tokenOf = (req) => (req.headers.get("Authorization") || "").replace(/^Bearer /, "").trim();
@@ -1583,6 +1647,12 @@ function constantEqual(a, b) {
   let mismatch = 0;
   for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return mismatch === 0;
+}
+async function effectiveFeatureSettings(sql, user) {
+  await ensureTables(sql);
+  const flags = await sql("SELECT feature_key,enabled FROM feature_flags").all();
+  const overrides = user ? await sql("SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?", user.id).all() : { results: [] };
+  return effectiveFlags(flags.results, overrides.results);
 }
 
 // worker/index.js
@@ -2192,6 +2262,8 @@ var index_default = { async fetch(req, env) {
     }
     const featureReply = await managementRoute(req, env, { sql, reply, randomToken, user });
     if (featureReply) return featureReply;
+    const adjusted = await adjustedPricesRoute(req, env, { sql, reply, user, effectiveFeatureSettings });
+    if (adjusted) return adjusted;
     const rankingUpdate = await rankingRefreshRoute(req, { sql, reply, db: env.DB, dispatch, env });
     if (rankingUpdate) return rankingUpdate;
     const eventCache = await stockEventCacheRoute(req, { sql, reply, user, randomToken });

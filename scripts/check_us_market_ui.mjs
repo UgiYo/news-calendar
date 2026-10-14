@@ -5,6 +5,7 @@ import {INITIAL_TOPOLOGY,publishedTopology} from '../shared/industry-topology.js
 import assert from 'node:assert/strict';
 const {window}=parseHTML('<html><body><div id="app"></div></body></html>');
 Object.assign(globalThis,{window,document:window.document,DOMParser:window.DOMParser,CustomEvent:window.CustomEvent,Node:window.Node,location:{hostname:'localhost',pathname:'/',hash:''},history:{replaceState(){}},requestAnimationFrame:fn=>setTimeout(fn,0),matchMedia:()=>({matches:false,addEventListener(){}})});
+Object.defineProperty(window.SVGElement.prototype,'viewBox',{configurable:true,get(){return {baseVal:{width:Number((this.getAttribute('viewBox')||'0 0 680 340').split(' ')[2])}};}});
 window.HTMLElement.prototype.focus=function(){};window.HTMLElement.prototype.scrollIntoView=function(){};window.scrollTo=()=>{};window.matchMedia=globalThis.matchMedia;
 const storage=new Map();globalThis.localStorage={get length(){return storage.size},key:i=>[...storage.keys()][i],getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k)};
 localStorage.setItem('stock-news-session','alice');localStorage.setItem('stock-account-sync:alice:enabled','true');
@@ -19,6 +20,7 @@ let featureFlags={};let accountSyncEnabled=true;const calls=[];globalThis.fetch=
  if(u.pathname==='/account-settings'){if(options.body)accountSyncEnabled=JSON.parse(options.body).sync_enabled;result={owner_id:'alice',sync_enabled:accountSyncEnabled};}
  if(u.pathname==='/news')result={news};
  if(u.pathname==='/stock-movements')result={owner_id:'alice',movements:[]};
+ if(u.pathname==='/adjusted-prices')result={prices:[{code:u.searchParams.get('code'),date:'2026-10-05',open:100,high:110,low:90,close:100,adjusted_close:90,volume:1000},{code:u.searchParams.get('code'),date:'2026-10-06',open:90,high:99,low:81,close:90,adjusted_close:90,volume:1200}],source:'Yahoo Finance',asOf:'2026-10-14T00:00:00Z'};
  if(u.pathname==='/prices'||u.pathname==='/chart-prices')result={prices:[],source:'fixture'};
  if(u.pathname==='/ranking-stock')result={stock:companies.find(c=>c.code===u.searchParams.get('code')),history:[]};
  if(u.pathname==='/company-profile')result={profile:{heading:'NVDA 輝達',introduction:'NVIDIA',metrics:[],source:'SEC',url:'https://www.sec.gov',fetchedAt:new Date().toISOString()}};
@@ -43,6 +45,10 @@ try{
  mod.state.date='2026-10-07';await mod.switchMarket('TW');assert.equal(mod.state.date,'2026-10-08');await mod.switchMarket('US');assert.equal(mod.state.date,'2026-10-07');
  mod.state.query='NVDA';await mod.search();assert.ok(calls.some(p=>p.includes('/prices?code=US%3ANVDA')));assert.equal(mod.state.selected,'US:NVDA');
  await mod.openRankingStock('US:NVDA');assert.ok(document.querySelector('#stock-ranking-title').textContent.includes('美股走勢（USD）'));assert.equal(document.querySelector('[data-candle-period="1m"]'),null);assert.ok(document.querySelector('[data-candle-period="day"]'));
+ const adjustedToggle=document.querySelector('#toggle-adjusted-candles');adjustedToggle.checked=true;adjustedToggle.dispatchEvent(new window.Event('change'));
+ for(let i=0;i<60&&!document.querySelector('.candle-adjustment-control strong')?.textContent.includes('還原 K');i++)await new Promise(r=>setTimeout(r,5));
+ assert.ok(document.querySelector('.candle-adjustment-control strong').textContent.includes('還原 K'));assert.match(document.querySelector('#candle-quote').textContent,/收 90.00/);assert.ok(calls.some(p=>p.startsWith('/adjusted-prices?code=US%3ANVDA')));
+ featureFlags={'stock_tools.adjusted_candles':false};await mod.refreshFeatures();await Promise.resolve();assert.ok(document.querySelector('.candle-adjustment-control strong').textContent.includes('原始 K'));assert.equal(document.querySelector('.candle-adjustment-control').getAttribute('data-feature-disabled'),'true');featureFlags={};await mod.refreshFeatures();
  document.querySelector('#close-stock-ranking').click();await mod.switchMarket('TW');assert.equal(document.querySelector('#ranking-tab').hidden,false);
  document.querySelector('#topology-tab').click();
  for(let i=0;i<60&&!document.querySelector('#topology-tab-panel .topology-svg');i++)await new Promise(r=>setTimeout(r,5));

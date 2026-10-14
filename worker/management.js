@@ -16,6 +16,7 @@ const FEATURE_TREE=[
  {key:'topology',label:'產業關聯內容',children:[{key:'topology.company_relations',label:'公司供應／合作／競爭關係'},{key:'topology.pending',label:'允許檢視待確認關係'},{key:'topology.events',label:'關聯新聞與 Podcast'},{key:'topology.analysis',label:'AI 事件傳導分析'}]},
  {key:'stock_tools',label:'個股工具',children:[
   {key:'stock_tools.candles',label:'K 線'},
+  {key:'stock_tools.adjusted_candles',label:'還原 K（台股／美股日週月）'},
   {key:'stock_tools.broker_reports',label:'券商報告'},
   {key:'stock_tools.holdings',label:'券商庫存'},
   {key:'stock_tools.company_profile',label:'公司財務參考'}
@@ -27,7 +28,7 @@ const FEATURE_TREE=[
  ]}
 ];
 const FEATURE_DESCRIPTIONS={"markets.tw": "台股搜尋、追蹤清單及市場切換；關閉後可自動切至美股。", "markets.us": "美股搜尋、追蹤清單及市場切換；關閉後可自動切至台股。", "news_calendar.news": "股票新聞、日期新聞與摘要入口；不連帶隱藏 Podcast 日曆。", "news_calendar.podcast": "Podcast 日曆、頻道篩選、提及追蹤股與節目入口。", "news_calendar.collect": "立即更新新聞按鈕；不修改每日收集排程。", "news_calendar.podcast_import": "匯入 Podcast 頻道入口；已匯入節目保留。", "market_watch.turnover": "台股成交值排行頁面與產業趨勢；美股不提供此排行。", "market_watch.observation": "優先觀察股與價值鏈畫面。", "market_watch.stock_events": "個股異動追查區塊。", "stock_tools.candles": "K 線入口，涵蓋均線、方向箭頭與支撐壓力。", "stock_tools.broker_reports": "公開券商報告；與券商庫存分開控制。", "stock_tools.holdings": "券商庫存匯入／檢視入口；不刪除裝置庫存。", "stock_tools.company_profile": "公司財務參考區塊及其分析按鈕。", "ai_tools.assistant": "浮動 AI 小助手與對話入口。", "ai_tools.results": "AI 成果中心及通知入口；既有成果保留。", "ai_tools.settings": "AI 設定入口；不更動使用者 API 金鑰或模型。"};
-Object.assign(FEATURE_DESCRIPTIONS,{'market_watch.topology':'產業關聯頁籤與資料 API；關閉後不提供拓撲資料。','topology.company_relations':'公司間已建檔的供應、合作及競爭關係。','topology.pending':'允許使用者主動展開待確認關係，預設不顯示。','topology.events':'選定產業或公司的既有新聞與 Podcast。','topology.analysis':'依使用者個人 AI 設定分析可能傳導路徑，需主動點擊並產生用量。'});
+Object.assign(FEATURE_DESCRIPTIONS,{'stock_tools.adjusted_candles':'除權息／拆股調整日週月 K 入口與 API；分鐘 K 保持來源行情。','market_watch.topology':'產業關聯頁籤與資料 API；關閉後不提供拓撲資料。','topology.company_relations':'公司間已建檔的供應、合作及競爭關係。','topology.pending':'允許使用者主動展開待確認關係，預設不顯示。','topology.events':'選定產業或公司的既有新聞與 Podcast。','topology.analysis':'依使用者個人 AI 設定分析可能傳導路徑，需主動點擊並產生用量。'});
 for(const parent of FEATURE_TREE)for(const child of parent.children)child.description=FEATURE_DESCRIPTIONS[child.key];
 const ALL_KEYS=FEATURE_TREE.flatMap(x=>[x.key,...x.children.map(y=>y.key)]);
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -118,3 +119,5 @@ function effectiveFlags(flags,overrides){
 }
 async function hash(value){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(value)));return [...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 function constantEqual(a,b){if(a.length!==b.length)return false;let mismatch=0;for(let i=0;i<a.length;i++)mismatch|=a.charCodeAt(i)^b.charCodeAt(i);return mismatch===0;}
+
+export async function effectiveFeatureSettings(sql,user){await ensureTables(sql);const flags=await sql('SELECT feature_key,enabled FROM feature_flags').all();const overrides=user?await sql('SELECT feature_key,enabled FROM user_feature_overrides WHERE user_id=?',user.id).all():{results:[]};return effectiveFlags(flags.results,overrides.results);}
