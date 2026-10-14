@@ -1,40 +1,3 @@
-// worker/news-trigger-audit.js
-async function recordCollectionTrigger(sql, { id, jobId, code, actor, source, status }) {
-  await sql("CREATE TABLE IF NOT EXISTS news_collection_triggers(id TEXT PRIMARY KEY,job_id TEXT NOT NULL,company_code TEXT NOT NULL,actor TEXT NOT NULL,source TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL)").run();
-  await sql("CREATE INDEX IF NOT EXISTS collection_triggers_job ON news_collection_triggers(job_id,created_at)").run();
-  await sql("INSERT INTO news_collection_triggers(id,job_id,company_code,actor,source,status,created_at) VALUES(?,?,?,?,?,?,?)", id, jobId, code, actor, source, status, Date.now()).run();
-}
-async function collectionTriggers(sql, jobId) {
-  try {
-    return (await sql("SELECT * FROM news_collection_triggers WHERE job_id=? ORDER BY created_at,id", jobId).all()).results;
-  } catch (e) {
-    if (String(e.message).includes("no such table")) return [];
-    throw e;
-  }
-}
-
-// worker/account-settings.js
-async function accountSettingsRoute(req, { sql, reply, user }) {
-  const url = new URL(req.url);
-  if (url.pathname !== "/account-settings") return null;
-  if (!user?.id) return reply({ error: "\u8ACB\u5148\u767B\u5165" }, 401);
-  if (!["GET", "POST"].includes(req.method)) return reply({ error: "Method not allowed" }, 405);
-  await sql("CREATE TABLE IF NOT EXISTS account_settings(user_id TEXT PRIMARY KEY REFERENCES users(id),sync_enabled INTEGER NOT NULL,updated_at INTEGER NOT NULL)").run();
-  if (req.method === "GET") {
-    const row = await sql("SELECT sync_enabled,updated_at FROM account_settings WHERE user_id=?", user.id).first();
-    return reply({ owner_id: user.id, sync_enabled: row ? !!row.sync_enabled : null, updated_at: row?.updated_at || null });
-  }
-  let body;
-  try {
-    body = await req.json();
-  } catch {
-    return reply({ error: "Invalid JSON" }, 400);
-  }
-  if (!body || Object.keys(body).length !== 1 || typeof body.sync_enabled !== "boolean") return reply({ error: "Invalid settings" }, 400);
-  await sql("INSERT INTO account_settings(user_id,sync_enabled,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET sync_enabled=excluded.sync_enabled,updated_at=excluded.updated_at WHERE account_settings.sync_enabled<>excluded.sync_enabled", user.id, body.sync_enabled ? 1 : 0, Date.now()).run();
-  return reply({ owner_id: user.id, sync_enabled: body.sync_enabled });
-}
-
 // shared/us-companies.json
 var us_companies_default = [
   {
@@ -378,6 +341,150 @@ function newsQuery(c, range = "when:1m") {
   const names = companyAliases(enrichCompany(c)).filter((n) => n.length >= 2).map((n) => '"' + n.replaceAll('"', "") + '"');
   const us = isUS(c.code);
   return "(" + [...names, '"' + symbolOf(c.code) + '"'].join(" OR ") + ") " + (us ? "(site:reuters.com OR site:cnbc.com OR site:finance.yahoo.com OR site:marketwatch.com OR site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com)" : "(site:cna.com.tw OR site:moneydj.com OR site:news.cnyes.com)") + " " + range;
+}
+
+// shared/substack.js
+var DEFAULT_SUBSTACK = { id: "unclestocknotes", title: "\u5927\u53D4\u7F8E\u80A1\u7B46\u8A18 Uncle Stock Notes", url: "https://unclestocknotes.substack.com" };
+function substackPublication(value) {
+  const u = new URL(String(value || "").trim());
+  if (u.protocol !== "https:" || u.username || u.password || u.port) throw Error("\u8ACB\u4F7F\u7528 HTTPS Substack \u520A\u7269\u7DB2\u5740");
+  if (u.hostname === "substack.com" && u.pathname === "/@unclestocknotes") return DEFAULT_SUBSTACK.url;
+  if (!/^[a-z0-9][a-z0-9-]*\.substack\.com$/.test(u.hostname)) throw Error("\u8ACB\u8CBC\u4E0A\u4F5C\u8005\u7684\u520A\u7269\u7DB2\u5740\uFF08\u4F8B\u5982 https://unclestocknotes.substack.com\uFF09\uFF0C\u500B\u4EBA\u9801\u7DB2\u5740\u50C5\u652F\u63F4\u5DF2\u9A57\u8B49\u4F5C\u8005");
+  return u.origin;
+}
+function substackMentions(text, companies = usCompanies) {
+  const known = new Set(companies.map((c) => c.code)), extra = [...String(text || "").matchAll(/(?:\$|\b(?:NYSE|NASDAQ|ticker)\s*[:：]\s*)([A-Z][A-Z0-9.-]{0,14})(?![A-Za-z0-9.-])/g)].map((m) => m[1]).filter((symbol) => !known.has("US:" + symbol));
+  companies = [...companies, ...new Set(extra)].map((c) => typeof c === "string" ? { code: "US:" + c, name: "", unverified: true } : c);
+  const lines = String(text || "").split(/\n+/).map((s) => s.trim()).filter(Boolean);
+  return companies.filter((c) => isUS(c.code)).flatMap((c) => {
+    const matches = lines.map((line, index) => ({ line, index })).filter(({ line }) => usMention(line, c));
+    return matches.length ? [{ code: c.code, name: c.name || c.code.slice(3), status: c.unverified ? "\u539F\u6587\u660E\u78BA\u4EE3\u865F\uFF0C\u4E0A\u5E02\u8EAB\u5206\u5F85\u78BA\u8A8D" : "\u539F\u6587\u63D0\u53CA\uFF0C\u672A\u5224\u5B9A\u7ACB\u5834", evidence: matches.slice(0, 12).map(({ line, index }) => {
+      const at = Math.min(...[...companyAliases(enrichCompany(c)), c.code.slice(3)].map((term) => line.toLowerCase().indexOf(term.toLowerCase())).filter((n) => n >= 0)), start = Math.max(0, (Number.isFinite(at) ? at : 0) - 180);
+      return { paragraph: index + 1, text: (start ? "\u2026" : "") + line.slice(start, start + 600) + (line.length > start + 600 ? "\u2026" : "") };
+    }) }] : [];
+  });
+}
+
+// worker/substack.js
+function normalizeSubstackArticle(data, author) {
+  const u = new URL(data.url);
+  if (u.origin !== author.url || !/^\/p\/[^/]+$/.test(u.pathname) || u.username || u.password) throw Error("\u6587\u7AE0\u5FC5\u9808\u4F86\u81EA\u5C0D\u61C9\u520A\u7269");
+  if (!data.title || String(data.title).length > 1e3 || !Number.isFinite(Date.parse(data.published_at))) throw Error("\u6587\u7AE0\u683C\u5F0F\u932F\u8AA4");
+  const text = String(data.text || "");
+  if (text.length > 1e5) throw Error("\u6587\u7AE0\u5167\u6587\u8D85\u904E\u4E0A\u9650");
+  return { id: author.id + ":" + u.pathname.slice(3), author_id: author.id, author_title: author.title, url: u.origin + u.pathname, title: String(data.title), published_at: new Date(data.published_at).toISOString(), date: marketDay(new Date(data.published_at), "US"), access: data.access === "public" ? "public" : "preview", text, mentions: substackMentions(text) };
+}
+async function substackRoute(req, { sql, reply, user, admin = false, dispatch: dispatch2, env, flags = {} }) {
+  const u = new URL(req.url), path = u.pathname;
+  if (!["/substack/authors", "/substack/articles", "/substack/article", "/substack/refresh", "/admin/substack/authors", "/admin/substack/update"].includes(path)) return null;
+  if (!admin && !user) return reply({ error: "\u8ACB\u5148\u767B\u5165" }, 401);
+  if (path.startsWith("/admin/") && !admin) return reply({ error: "Forbidden" }, 403);
+  if (!admin && (flags["markets.us"] === false || flags["news_calendar.substack"] === false)) return reply({ error: "Substack \u529F\u80FD\u76EE\u524D\u672A\u958B\u653E" }, 403);
+  await sql("CREATE TABLE IF NOT EXISTS substack_authors(id TEXT PRIMARY KEY,url TEXT UNIQUE NOT NULL,title TEXT NOT NULL,archive_offset INTEGER NOT NULL DEFAULT 0,archive_complete INTEGER NOT NULL DEFAULT 0,updated_at TEXT,last_error TEXT)").run();
+  await sql("CREATE TABLE IF NOT EXISTS substack_articles(id TEXT PRIMARY KEY,author_id TEXT NOT NULL,date TEXT NOT NULL,published_at TEXT NOT NULL,payload TEXT NOT NULL)").run();
+  await sql("CREATE INDEX IF NOT EXISTS substack_articles_date ON substack_articles(date DESC,published_at DESC,id)").run();
+  await sql("INSERT INTO substack_authors(id,url,title) VALUES(?,?,?) ON CONFLICT(id) DO NOTHING", DEFAULT_SUBSTACK.id, DEFAULT_SUBSTACK.url, DEFAULT_SUBSTACK.title).run();
+  if (path.endsWith("/authors") && req.method === "GET") return reply({ authors: (await sql("SELECT a.*,(SELECT MAX(published_at) FROM substack_articles WHERE author_id=a.id) AS latest_published_at FROM substack_authors a ORDER BY title").all()).results });
+  if (path === "/substack/authors" && req.method === "POST") {
+    if (flags["news_calendar.substack_import"] === false) return reply({ error: "\u4F5C\u8005\u532F\u5165\u76EE\u524D\u672A\u958B\u653E" }, 403);
+    try {
+      const data = await req.json(), url = substackPublication(data.url), id = new URL(url).hostname.split(".")[0];
+      const count = await sql("SELECT COUNT(*) AS total FROM substack_authors").first();
+      if (count.total >= 50 && !await sql("SELECT id FROM substack_authors WHERE id=?", id).first()) throw Error("\u4F5C\u8005\u5DF2\u9054 50 \u4F4D\u4E0A\u9650");
+      await sql("INSERT INTO substack_authors(id,url,title) VALUES(?,?,?) ON CONFLICT(id) DO NOTHING", id, url, String(data.title || id).slice(0, 500)).run();
+      let warning = "";
+      try {
+        await dispatch2(env, "substack.yml");
+      } catch (e) {
+        warning = e.message;
+      }
+      return reply({ ok: true, warning, message: warning ? "\u4F5C\u8005\u5DF2\u4FDD\u5B58\uFF0C\u6392\u7A0B\u5C1A\u672A\u555F\u52D5" : "\u4F5C\u8005\u5DF2\u4FDD\u5B58\uFF0C\u6B77\u53F2\u6587\u7AE0\u532F\u5165\u5DF2\u6392\u5165\u80CC\u666F" });
+    } catch (e) {
+      return reply({ error: e.message }, 400);
+    }
+  }
+  if (path === "/substack/refresh" && req.method === "POST") {
+    const row = await sql("SELECT MAX(updated_at) AS latest FROM substack_authors").first();
+    if (row.latest && Date.now() - Date.parse(row.latest) < 15 * 6e4) return reply({ message: "\u6700\u8FD1 15 \u5206\u9418\u5DF2\u66F4\u65B0\uFF0C\u8ACB\u5148\u91CD\u65B0\u8F09\u5165\u6587\u7AE0" });
+    try {
+      await dispatch2(env, "substack.yml");
+      return reply({ message: "\u5DF2\u6392\u5165\u80CC\u666F\u66F4\u65B0\uFF1B\u5B8C\u6210\u5F8C\u8ACB\u91CD\u65B0\u8F09\u5165\u6587\u7AE0" });
+    } catch (e) {
+      return reply({ error: e.message }, 502);
+    }
+  }
+  if (path === "/substack/articles" && req.method === "GET") {
+    const offset = Number(u.searchParams.get("offset") || 0);
+    if (!Number.isSafeInteger(offset) || offset < 0) return reply({ error: "Invalid offset" }, 400);
+    const rows = (await sql("SELECT payload FROM substack_articles ORDER BY published_at DESC,id LIMIT 100 OFFSET ?", offset).all()).results;
+    return reply({ articles: rows.map((r) => {
+      const { text, ...row } = JSON.parse(r.payload);
+      return { ...row, mentions: row.mentions.map(({ code, name, status }) => ({ code, name, status })) };
+    }), has_more: rows.length === 100, next_offset: offset + rows.length });
+  }
+  if (path === "/substack/article" && req.method === "GET") {
+    const row = await sql("SELECT payload FROM substack_articles WHERE id=?", u.searchParams.get("id")).first();
+    return row ? reply({ article: JSON.parse(row.payload) }) : reply({ error: "\u627E\u4E0D\u5230\u6587\u7AE0" }, 404);
+  }
+  if (path === "/admin/substack/update" && req.method === "POST") {
+    try {
+      const raw = await req.text();
+      if (new TextEncoder().encode(raw).length > 15e5) throw Error("\u6279\u6B21\u5167\u5BB9\u904E\u5927");
+      const data = JSON.parse(raw), author = await sql("SELECT * FROM substack_authors WHERE id=?", data.author_id).first();
+      if (!author) throw Error("\u627E\u4E0D\u5230\u4F5C\u8005");
+      if (data.error) {
+        await sql("UPDATE substack_authors SET last_error=? WHERE id=?", String(data.error).slice(0, 500), author.id).run();
+        return reply({ ok: true });
+      }
+      if (!Array.isArray(data.articles) || data.articles.length > 20) throw Error("\u6279\u6B21\u683C\u5F0F\u932F\u8AA4");
+      const articles = data.articles.map((a) => normalizeSubstackArticle(a, author));
+      for (const a of articles) await sql("INSERT INTO substack_articles(id,author_id,date,published_at,payload) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,date=excluded.date,published_at=excluded.published_at", a.id, a.author_id, a.date, a.published_at, JSON.stringify(a)).run();
+      const offset = data.archive_offset ?? author.archive_offset;
+      if (!Number.isSafeInteger(offset) || offset < 0) throw Error("Invalid archive cursor");
+      await sql("UPDATE substack_authors SET archive_offset=?,archive_complete=?,updated_at=?,last_error=NULL WHERE id=?", offset, data.archive_complete === void 0 ? author.archive_complete : Number(!!data.archive_complete), (/* @__PURE__ */ new Date()).toISOString(), author.id).run();
+      return reply({ ok: true, count: articles.length });
+    } catch (e) {
+      return reply({ error: e.message }, 400);
+    }
+  }
+  return reply({ error: "Method not allowed" }, 405);
+}
+
+// worker/news-trigger-audit.js
+async function recordCollectionTrigger(sql, { id, jobId, code, actor, source, status }) {
+  await sql("CREATE TABLE IF NOT EXISTS news_collection_triggers(id TEXT PRIMARY KEY,job_id TEXT NOT NULL,company_code TEXT NOT NULL,actor TEXT NOT NULL,source TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL)").run();
+  await sql("CREATE INDEX IF NOT EXISTS collection_triggers_job ON news_collection_triggers(job_id,created_at)").run();
+  await sql("INSERT INTO news_collection_triggers(id,job_id,company_code,actor,source,status,created_at) VALUES(?,?,?,?,?,?,?)", id, jobId, code, actor, source, status, Date.now()).run();
+}
+async function collectionTriggers(sql, jobId) {
+  try {
+    return (await sql("SELECT * FROM news_collection_triggers WHERE job_id=? ORDER BY created_at,id", jobId).all()).results;
+  } catch (e) {
+    if (String(e.message).includes("no such table")) return [];
+    throw e;
+  }
+}
+
+// worker/account-settings.js
+async function accountSettingsRoute(req, { sql, reply, user }) {
+  const url = new URL(req.url);
+  if (url.pathname !== "/account-settings") return null;
+  if (!user?.id) return reply({ error: "\u8ACB\u5148\u767B\u5165" }, 401);
+  if (!["GET", "POST"].includes(req.method)) return reply({ error: "Method not allowed" }, 405);
+  await sql("CREATE TABLE IF NOT EXISTS account_settings(user_id TEXT PRIMARY KEY REFERENCES users(id),sync_enabled INTEGER NOT NULL,updated_at INTEGER NOT NULL)").run();
+  if (req.method === "GET") {
+    const row = await sql("SELECT sync_enabled,updated_at FROM account_settings WHERE user_id=?", user.id).first();
+    return reply({ owner_id: user.id, sync_enabled: row ? !!row.sync_enabled : null, updated_at: row?.updated_at || null });
+  }
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return reply({ error: "Invalid JSON" }, 400);
+  }
+  if (!body || Object.keys(body).length !== 1 || typeof body.sync_enabled !== "boolean") return reply({ error: "Invalid settings" }, 400);
+  await sql("INSERT INTO account_settings(user_id,sync_enabled,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET sync_enabled=excluded.sync_enabled,updated_at=excluded.updated_at WHERE account_settings.sync_enabled<>excluded.sync_enabled", user.id, body.sync_enabled ? 1 : 0, Date.now()).run();
+  return reply({ owner_id: user.id, sync_enabled: body.sync_enabled });
 }
 
 // src/news-policy.js
@@ -816,7 +923,7 @@ async function stockEventsRoute(req, { sql, reply, user, parsePreview: parsePrev
 // worker/account-results.js
 var fields2 = ["id", "title", "kind", "date", "updated_at", "answer", "text", "partial", "failures", "transcription_model", "completed_at", "episode", "cloud_id"];
 function validAccountResult(row) {
-  return row && Object.keys(row).every((k) => fields2.includes(k)) && (row.cloud_id === void 0 || typeof row.cloud_id === "string" && row.cloud_id.length <= 200) && (row.completed_at === void 0 || typeof row.completed_at === "string" && Number.isFinite(Date.parse(row.completed_at))) && (row.episode === void 0 || row.episode && typeof row.episode === "object" && !Array.isArray(row.episode) && Object.entries(row.episode).every(([k, v]) => ["id", "title", "date", "url", "audio_url", "channel_id", "channel_name"].includes(k) && typeof v === "string" && v.length <= 3e3)) && typeof row.id === "string" && row.id.length > 0 && row.id.length <= 500 && (row.transcription_model === void 0 || typeof row.transcription_model === "string" && row.transcription_model.length <= 200) && typeof row.title === "string" && row.title.length <= 1e3 && ["news", "text", "podcast"].includes(row.kind) && typeof row.updated_at === "string" && /^\d{4}-\d\d-\d\dT/.test(row.updated_at) && Number.isFinite(Date.parse(row.updated_at)) && typeof row.answer === "string" && typeof row.text === "string" && typeof row.date === "string" && typeof row.partial === "boolean" && Array.isArray(row.failures) && row.failures.every((v) => typeof v === "string");
+  return row && Object.keys(row).every((k) => fields2.includes(k)) && (row.cloud_id === void 0 || typeof row.cloud_id === "string" && row.cloud_id.length <= 200) && (row.completed_at === void 0 || typeof row.completed_at === "string" && Number.isFinite(Date.parse(row.completed_at))) && (row.episode === void 0 || row.episode && typeof row.episode === "object" && !Array.isArray(row.episode) && Object.entries(row.episode).every(([k, v]) => ["id", "title", "date", "url", "audio_url", "channel_id", "channel_name"].includes(k) && typeof v === "string" && v.length <= 3e3)) && typeof row.id === "string" && row.id.length > 0 && row.id.length <= 500 && (row.transcription_model === void 0 || typeof row.transcription_model === "string" && row.transcription_model.length <= 200) && typeof row.title === "string" && row.title.length <= 1e3 && ["news", "text", "podcast", "substack"].includes(row.kind) && typeof row.updated_at === "string" && /^\d{4}-\d\d-\d\dT/.test(row.updated_at) && Number.isFinite(Date.parse(row.updated_at)) && typeof row.answer === "string" && typeof row.text === "string" && typeof row.date === "string" && typeof row.partial === "boolean" && Array.isArray(row.failures) && row.failures.every((v) => typeof v === "string");
 }
 async function accountResultsRoute(req, { sql, reply, user, db }) {
   const url = new URL(req.url);
@@ -1515,6 +1622,8 @@ var FEATURE_TREE = [
   { key: "news_calendar", label: "\u65B0\u805E\u6708\u66C6", children: [
     { key: "news_calendar.news", label: "\u65B0\u805E\u8207\u65E5\u671F\u6458\u8981" },
     { key: "news_calendar.podcast", label: "Podcast \u65E5\u66C6\u8207\u63D0\u53CA\u8FFD\u8E64\u80A1" },
+    { key: "news_calendar.substack", label: "\u7F8E\u80A1 Substack \u6587\u7AE0\u8207\u6A19\u7684\u89C0\u9EDE" },
+    { key: "news_calendar.substack_import", label: "\u532F\u5165 Substack \u4F5C\u8005" },
     { key: "news_calendar.collect", label: "\u624B\u52D5\u66F4\u65B0\u65B0\u805E" },
     { key: "news_calendar.podcast_import", label: "\u532F\u5165 Podcast \u983B\u9053" }
   ] },
@@ -1539,7 +1648,7 @@ var FEATURE_TREE = [
   ] }
 ];
 var FEATURE_DESCRIPTIONS = { "markets.tw": "\u53F0\u80A1\u641C\u5C0B\u3001\u8FFD\u8E64\u6E05\u55AE\u53CA\u5E02\u5834\u5207\u63DB\uFF1B\u95DC\u9589\u5F8C\u53EF\u81EA\u52D5\u5207\u81F3\u7F8E\u80A1\u3002", "markets.us": "\u7F8E\u80A1\u641C\u5C0B\u3001\u8FFD\u8E64\u6E05\u55AE\u53CA\u5E02\u5834\u5207\u63DB\uFF1B\u95DC\u9589\u5F8C\u53EF\u81EA\u52D5\u5207\u81F3\u53F0\u80A1\u3002", "news_calendar.news": "\u80A1\u7968\u65B0\u805E\u3001\u65E5\u671F\u65B0\u805E\u8207\u6458\u8981\u5165\u53E3\uFF1B\u4E0D\u9023\u5E36\u96B1\u85CF Podcast \u65E5\u66C6\u3002", "news_calendar.podcast": "Podcast \u65E5\u66C6\u3001\u983B\u9053\u7BE9\u9078\u3001\u63D0\u53CA\u8FFD\u8E64\u80A1\u8207\u7BC0\u76EE\u5165\u53E3\u3002", "news_calendar.collect": "\u7ACB\u5373\u66F4\u65B0\u65B0\u805E\u6309\u9215\uFF1B\u4E0D\u4FEE\u6539\u6BCF\u65E5\u6536\u96C6\u6392\u7A0B\u3002", "news_calendar.podcast_import": "\u532F\u5165 Podcast \u983B\u9053\u5165\u53E3\uFF1B\u5DF2\u532F\u5165\u7BC0\u76EE\u4FDD\u7559\u3002", "market_watch.turnover": "\u53F0\u80A1\u6210\u4EA4\u503C\u6392\u884C\u9801\u9762\u8207\u7522\u696D\u8DA8\u52E2\uFF1B\u7F8E\u80A1\u4E0D\u63D0\u4F9B\u6B64\u6392\u884C\u3002", "market_watch.observation": "\u512A\u5148\u89C0\u5BDF\u80A1\u8207\u50F9\u503C\u93C8\u756B\u9762\u3002", "market_watch.stock_events": "\u500B\u80A1\u7570\u52D5\u8FFD\u67E5\u5340\u584A\u3002", "stock_tools.candles": "K \u7DDA\u5165\u53E3\uFF0C\u6DB5\u84CB\u5747\u7DDA\u3001\u65B9\u5411\u7BAD\u982D\u8207\u652F\u6490\u58D3\u529B\u3002", "stock_tools.broker_reports": "\u516C\u958B\u5238\u5546\u5831\u544A\uFF1B\u8207\u5238\u5546\u5EAB\u5B58\u5206\u958B\u63A7\u5236\u3002", "stock_tools.holdings": "\u5238\u5546\u5EAB\u5B58\u532F\u5165\uFF0F\u6AA2\u8996\u5165\u53E3\uFF1B\u4E0D\u522A\u9664\u88DD\u7F6E\u5EAB\u5B58\u3002", "stock_tools.company_profile": "\u516C\u53F8\u8CA1\u52D9\u53C3\u8003\u5340\u584A\u53CA\u5176\u5206\u6790\u6309\u9215\u3002", "ai_tools.assistant": "\u6D6E\u52D5 AI \u5C0F\u52A9\u624B\u8207\u5C0D\u8A71\u5165\u53E3\u3002", "ai_tools.results": "AI \u6210\u679C\u4E2D\u5FC3\u53CA\u901A\u77E5\u5165\u53E3\uFF1B\u65E2\u6709\u6210\u679C\u4FDD\u7559\u3002", "ai_tools.settings": "AI \u8A2D\u5B9A\u5165\u53E3\uFF1B\u4E0D\u66F4\u52D5\u4F7F\u7528\u8005 API \u91D1\u9470\u6216\u6A21\u578B\u3002" };
-Object.assign(FEATURE_DESCRIPTIONS, { "stock_tools.adjusted_candles": "\u9664\u6B0A\u606F\uFF0F\u62C6\u80A1\u8ABF\u6574\u65E5\u9031\u6708 K \u5165\u53E3\u8207 API\uFF1B\u5206\u9418 K \u4FDD\u6301\u4F86\u6E90\u884C\u60C5\u3002", "market_watch.topology": "\u7522\u696D\u95DC\u806F\u9801\u7C64\u8207\u8CC7\u6599 API\uFF1B\u95DC\u9589\u5F8C\u4E0D\u63D0\u4F9B\u62D3\u64B2\u8CC7\u6599\u3002", "topology.company_relations": "\u516C\u53F8\u9593\u5DF2\u5EFA\u6A94\u7684\u4F9B\u61C9\u3001\u5408\u4F5C\u53CA\u7AF6\u722D\u95DC\u4FC2\u3002", "topology.pending": "\u5141\u8A31\u4F7F\u7528\u8005\u4E3B\u52D5\u5C55\u958B\u5F85\u78BA\u8A8D\u95DC\u4FC2\uFF0C\u9810\u8A2D\u4E0D\u986F\u793A\u3002", "topology.events": "\u9078\u5B9A\u7522\u696D\u6216\u516C\u53F8\u7684\u65E2\u6709\u65B0\u805E\u8207 Podcast\u3002", "topology.analysis": "\u4F9D\u4F7F\u7528\u8005\u500B\u4EBA AI \u8A2D\u5B9A\u5206\u6790\u53EF\u80FD\u50B3\u5C0E\u8DEF\u5F91\uFF0C\u9700\u4E3B\u52D5\u9EDE\u64CA\u4E26\u7522\u751F\u7528\u91CF\u3002" });
+Object.assign(FEATURE_DESCRIPTIONS, { "news_calendar.substack": "\u7F8E\u80A1\u4F5C\u8005\u6587\u7AE0\u3001\u539F\u6587\u6A19\u7684\u6BD4\u5C0D\u3001\u6708\u66C6\u6A19\u8A18\u8207\u500B\u4EBA AI \u4F5C\u8005\u89C0\u9EDE\u6574\u7406\uFF1B\u95DC\u9589\u5F8C\u505C\u6B62\u63D0\u4F9B\u4F7F\u7528\u8005 API\u3002", "news_calendar.substack_import": "\u65B0\u589E\u5171\u7528 Substack \u520A\u7269\u4F5C\u8005\u5165\u53E3\uFF1B\u5DF2\u532F\u5165\u6587\u7AE0\u4FDD\u7559\uFF0C\u65E2\u6709\u4F5C\u8005\u6392\u7A0B\u6301\u7E8C\u66F4\u65B0\u3002", "stock_tools.adjusted_candles": "\u9664\u6B0A\u606F\uFF0F\u62C6\u80A1\u8ABF\u6574\u65E5\u9031\u6708 K \u5165\u53E3\u8207 API\uFF1B\u5206\u9418 K \u4FDD\u6301\u4F86\u6E90\u884C\u60C5\u3002", "market_watch.topology": "\u7522\u696D\u95DC\u806F\u9801\u7C64\u8207\u8CC7\u6599 API\uFF1B\u95DC\u9589\u5F8C\u4E0D\u63D0\u4F9B\u62D3\u64B2\u8CC7\u6599\u3002", "topology.company_relations": "\u516C\u53F8\u9593\u5DF2\u5EFA\u6A94\u7684\u4F9B\u61C9\u3001\u5408\u4F5C\u53CA\u7AF6\u722D\u95DC\u4FC2\u3002", "topology.pending": "\u5141\u8A31\u4F7F\u7528\u8005\u4E3B\u52D5\u5C55\u958B\u5F85\u78BA\u8A8D\u95DC\u4FC2\uFF0C\u9810\u8A2D\u4E0D\u986F\u793A\u3002", "topology.events": "\u9078\u5B9A\u7522\u696D\u6216\u516C\u53F8\u7684\u65E2\u6709\u65B0\u805E\u8207 Podcast\u3002", "topology.analysis": "\u4F9D\u4F7F\u7528\u8005\u500B\u4EBA AI \u8A2D\u5B9A\u5206\u6790\u53EF\u80FD\u50B3\u5C0E\u8DEF\u5F91\uFF0C\u9700\u4E3B\u52D5\u9EDE\u64CA\u4E26\u7522\u751F\u7528\u91CF\u3002" });
 for (const parent of FEATURE_TREE) for (const child of parent.children) child.description = FEATURE_DESCRIPTIONS[child.key];
 var ALL_KEYS = FEATURE_TREE.flatMap((x) => [x.key, ...x.children.map((y) => y.key)]);
 var tokenOf = (req) => (req.headers.get("Authorization") || "").replace(/^Bearer /, "").trim();
@@ -2038,6 +2147,8 @@ var index_default = { async fetch(req, env) {
       if (!env.COLLECTOR_SECRET || await hash2(provided) !== await hash2("Bearer " + env.COLLECTOR_SECRET)) return reply({ error: "Forbidden" }, 403);
       const rankingUpdate2 = await rankingRefreshRoute(req, { sql, reply, db: env.DB, dispatch, env, admin: true });
       if (rankingUpdate2) return rankingUpdate2;
+      const substack2 = await substackRoute(req, { sql, reply, admin: true, dispatch, env });
+      if (substack2) return substack2;
       const podcasts2 = await sharedPodcastsRoute(req, { sql, reply, admin: true, hash: hash2 });
       if (podcasts2) return podcasts2;
       const personal2 = await aiJobsRoute(req, env, { admin: true, reply, dispatch, readArticleURL });
@@ -2276,6 +2387,8 @@ var index_default = { async fetch(req, env) {
     if (accountSettings) return accountSettings;
     const accountResults = await accountResultsRoute(req, { sql, reply, user, db: env.DB });
     if (accountResults) return accountResults;
+    const substack = path.startsWith("/substack/") ? await substackRoute(req, { sql, reply, user, dispatch, env, flags: await effectiveFeatureSettings(sql, user) }) : null;
+    if (substack) return substack;
     const podcasts = await sharedPodcastsRoute(req, { sql, reply, user, hash: hash2 });
     if (podcasts) return podcasts;
     if (path === "/portfolio-quotes") {

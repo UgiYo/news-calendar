@@ -4,6 +4,8 @@ const FEATURE_TREE=[
  {key:'news_calendar',label:'新聞月曆',children:[
   {key:'news_calendar.news',label:'新聞與日期摘要'},
   {key:'news_calendar.podcast',label:'Podcast 日曆與提及追蹤股'},
+  {key:'news_calendar.substack',label:'美股 Substack 文章與標的觀點'},
+  {key:'news_calendar.substack_import',label:'匯入 Substack 作者'},
   {key:'news_calendar.collect',label:'手動更新新聞'},
   {key:'news_calendar.podcast_import',label:'匯入 Podcast 頻道'}
  ]},
@@ -28,7 +30,7 @@ const FEATURE_TREE=[
  ]}
 ];
 const FEATURE_DESCRIPTIONS={"markets.tw": "台股搜尋、追蹤清單及市場切換；關閉後可自動切至美股。", "markets.us": "美股搜尋、追蹤清單及市場切換；關閉後可自動切至台股。", "news_calendar.news": "股票新聞、日期新聞與摘要入口；不連帶隱藏 Podcast 日曆。", "news_calendar.podcast": "Podcast 日曆、頻道篩選、提及追蹤股與節目入口。", "news_calendar.collect": "立即更新新聞按鈕；不修改每日收集排程。", "news_calendar.podcast_import": "匯入 Podcast 頻道入口；已匯入節目保留。", "market_watch.turnover": "台股成交值排行頁面與產業趨勢；美股不提供此排行。", "market_watch.observation": "優先觀察股與價值鏈畫面。", "market_watch.stock_events": "個股異動追查區塊。", "stock_tools.candles": "K 線入口，涵蓋均線、方向箭頭與支撐壓力。", "stock_tools.broker_reports": "公開券商報告；與券商庫存分開控制。", "stock_tools.holdings": "券商庫存匯入／檢視入口；不刪除裝置庫存。", "stock_tools.company_profile": "公司財務參考區塊及其分析按鈕。", "ai_tools.assistant": "浮動 AI 小助手與對話入口。", "ai_tools.results": "AI 成果中心及通知入口；既有成果保留。", "ai_tools.settings": "AI 設定入口；不更動使用者 API 金鑰或模型。"};
-Object.assign(FEATURE_DESCRIPTIONS,{'stock_tools.adjusted_candles':'除權息／拆股調整日週月 K 入口與 API；分鐘 K 保持來源行情。','market_watch.topology':'產業關聯頁籤與資料 API；關閉後不提供拓撲資料。','topology.company_relations':'公司間已建檔的供應、合作及競爭關係。','topology.pending':'允許使用者主動展開待確認關係，預設不顯示。','topology.events':'選定產業或公司的既有新聞與 Podcast。','topology.analysis':'依使用者個人 AI 設定分析可能傳導路徑，需主動點擊並產生用量。'});
+Object.assign(FEATURE_DESCRIPTIONS,{'news_calendar.substack':'美股作者文章、原文標的比對、月曆標記與個人 AI 作者觀點整理；關閉後停止提供使用者 API。','news_calendar.substack_import':'新增共用 Substack 刊物作者入口；已匯入文章保留，既有作者排程持續更新。','stock_tools.adjusted_candles':'除權息／拆股調整日週月 K 入口與 API；分鐘 K 保持來源行情。','market_watch.topology':'產業關聯頁籤與資料 API；關閉後不提供拓撲資料。','topology.company_relations':'公司間已建檔的供應、合作及競爭關係。','topology.pending':'允許使用者主動展開待確認關係，預設不顯示。','topology.events':'選定產業或公司的既有新聞與 Podcast。','topology.analysis':'依使用者個人 AI 設定分析可能傳導路徑，需主動點擊並產生用量。'});
 for(const parent of FEATURE_TREE)for(const child of parent.children)child.description=FEATURE_DESCRIPTIONS[child.key];
 const ALL_KEYS=FEATURE_TREE.flatMap(x=>[x.key,...x.children.map(y=>y.key)]);
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});

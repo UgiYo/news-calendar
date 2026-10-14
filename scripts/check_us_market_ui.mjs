@@ -11,10 +11,14 @@ const storage=new Map();globalThis.localStorage={get length(){return storage.siz
 localStorage.setItem('stock-news-session','alice');localStorage.setItem('stock-account-sync:alice:enabled','true');
 const intervals=globalThis.setInterval;globalThis.setInterval=()=>0;
 const companies=[{code:'2330',name:'台積電',full_name:'台灣積體電路',market:'上市'},{code:'US:NVDA',name:'輝達',full_name:'NVIDIA',market:'美股'}];
+const substackFixture=[{id:'unclestocknotes:nvda',author_id:'unclestocknotes',author_title:'大叔美股筆記',title:'作者提及 NVIDIA',date:'2026-10-08',published_at:'2026-10-08T18:00:00Z',url:'https://unclestocknotes.substack.com/p/nvda',access:'public',mentions:[{code:'US:NVDA',name:'輝達'}]},{id:'unclestocknotes:msft',author_id:'unclestocknotes',author_title:'大叔美股筆記',title:'作者提及 Microsoft',date:'2026-10-07',published_at:'2026-10-07T18:00:00Z',url:'https://unclestocknotes.substack.com/p/msft',access:'preview',mentions:[{code:'US:MSFT',name:'微軟'}]}];
 const news=[{company_code:'2330',news_date:'2026-10-08',published_at:'2026-10-08T01:00:00Z',title:'台積電台股專用新聞',source:'中央社',url:'https://www.cna.com.tw/tw'},{company_code:'US:NVDA',news_date:'2026-10-08',published_at:'2026-10-08T18:00:00Z',title:'NVIDIA US only news',source:'Reuters',url:'https://www.reuters.com/us'}];
 let featureFlags={};let accountSyncEnabled=true;const calls=[];globalThis.fetch=async(value,options={})=>{const u=new URL(value,'https://ui.test');calls.push(u.pathname+u.search);let result={};
  if(u.pathname==='/industry-topology')result={document:publishedTopology(INITIAL_TOPOLOGY,featureFlags),revision:0};
  if(u.pathname==='/industry-topology/news')result={news:news.filter(n=>(u.searchParams.get('codes')||'').split(',').includes(n.company_code))};
+ if(u.pathname==='/substack/authors')result={authors:[{id:'unclestocknotes',title:'大叔美股筆記',archive_offset:2,archive_complete:1}]};
+ if(u.pathname==='/substack/articles')result={articles:substackFixture,has_more:false};
+ if(u.pathname==='/substack/article')result={article:{...substackFixture.find(a=>a.id===u.searchParams.get('id')),text:'NVIDIA 是作者的觀察標的，沒有表示買進。'}};
  if(u.pathname==='/features')result={features:featureFlags};
  if(u.pathname==='/watchlists')result={companies};
  if(u.pathname==='/account-settings'){if(options.body)accountSyncEnabled=JSON.parse(options.body).sync_enabled;result={owner_id:'alice',sync_enabled:accountSyncEnabled};}
@@ -40,10 +44,17 @@ try{
  for(let i=0;i<20&&document.querySelector('[data-market="US"]').getAttribute('aria-selected')!=='true';i++)await new Promise(r=>setTimeout(r,5));
  assert.equal(mod.state.market,'US');assert.equal(document.querySelector('#search-market').value,'US');
  await mod.switchMarket('US');assert.equal(document.querySelector('[data-market="US"]').getAttribute('aria-selected'),'true');assert.equal(document.querySelector('#ranking-tab').hidden,true);assert.ok(document.querySelector('.market-context').textContent.includes('USD'));
+ for(let i=0;i<50&&document.querySelectorAll('.substack-card').length<2;i++)await new Promise(r=>setTimeout(r,5));
+ assert.equal(document.querySelectorAll('.substack-card').length,2);assert.ok(document.querySelector('.substack-watch-badge'));assert.match(document.querySelector('.substack-card .stock-actions').textContent,/★ NVDA/);
+ document.querySelector('[data-substack-open="unclestocknotes:nvda"]').click();for(let i=0;i<50&&!document.querySelector('[data-substack-evidence="US:NVDA"]');i++)await new Promise(r=>setTimeout(r,5));
+ assert.match(document.querySelector('#substack-article-dialog').textContent,/沒有表示買進/);document.querySelector('[data-substack-close]').click();
+ mod.state.date='2026-10-08';mod.state.dayOpen=true;mod.render();assert.ok(document.querySelector('#day-dialog .substack-day'));mod.state.dayOpen=false;
+ featureFlags={'news_calendar.substack':false};await mod.refreshFeatures();await Promise.resolve();assert.equal(document.querySelector('#substack-host').hidden,true);assert.equal(document.querySelectorAll('.substack-watch-badge').length,0);
+ featureFlags={};await mod.refreshFeatures();await Promise.resolve();assert.equal(document.querySelector('#substack-host').hidden,false);
  assert.ok(document.querySelector('#news-tab-panel').textContent.includes('NVIDIA US only news'));assert.ok(!document.querySelector('#news-tab-panel').textContent.includes('台積電台股專用新聞'));
  document.querySelector('[data-watch-market="US"]').click();assert.equal(document.querySelectorAll('.watchrow').length,1);assert.equal(document.querySelectorAll('.watch-market-group').length,1);assert.equal(document.querySelector('[data-watch-group="TW"]'),null);assert.ok(document.querySelector('.watchrow').textContent.includes('輝達'));
  mod.state.date='2026-10-07';await mod.switchMarket('TW');assert.equal(mod.state.date,'2026-10-08');await mod.switchMarket('US');assert.equal(mod.state.date,'2026-10-07');
- mod.state.query='NVDA';await mod.search();assert.ok(calls.some(p=>p.includes('/prices?code=US%3ANVDA')));assert.equal(mod.state.selected,'US:NVDA');
+ mod.state.query='NVDA';await mod.search();mod.render();assert.ok(calls.some(p=>p.includes('/prices?code=US%3ANVDA')));assert.equal(mod.state.selected,'US:NVDA');assert.equal(document.querySelectorAll('.substack-card').length,1);assert.match(document.querySelector('.substack-card').textContent,/NVIDIA/);
  await mod.openRankingStock('US:NVDA');assert.ok(document.querySelector('#stock-ranking-title').textContent.includes('美股走勢（USD）'));assert.equal(document.querySelector('[data-candle-period="1m"]'),null);assert.ok(document.querySelector('[data-candle-period="day"]'));
  const adjustedToggle=document.querySelector('#toggle-adjusted-candles');adjustedToggle.checked=true;adjustedToggle.dispatchEvent(new window.Event('change'));
  for(let i=0;i<60&&!document.querySelector('.candle-adjustment-note strong')?.textContent.includes('還原 K');i++)await new Promise(r=>setTimeout(r,5));
