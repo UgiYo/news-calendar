@@ -1,0 +1,25 @@
+name: Update Substack articles
+on:
+  schedule:
+    # 06:20 and 18:20 Asia/Taipei; actual start depends on GitHub scheduling.
+    - cron: '20 22,10 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: substack-import
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      WORKER_API_URL: ${{ vars.WORKER_API_URL }}
+      COLLECTOR_SECRET: ${{ secrets.COLLECTOR_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Import public posts and resume historical archive
+        run: python scripts/sync_substack.py
