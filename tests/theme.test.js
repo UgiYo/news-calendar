@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync,readdirSync} from 'node:fs';
 import {parseHTML} from 'linkedom';
 import {THEME_KEY,readTheme,applyTheme,themeControl,bindThemeControl,updateThemeControl} from '../src/theme.js';
 const storage=value=>({getItem:()=>value,setItem:(key,next)=>{assert.equal(key,THEME_KEY);value=next;}});
@@ -25,4 +26,11 @@ test('other tabs and device preference changes synchronize without overriding a 
  const window={document,localStorage:{getItem:()=>saved},matchMedia:()=>media,addEventListener(name,handler){handlers[name]=handler;}};
  installThemeSync(window);assert.equal(document.documentElement.dataset.theme,'light');media.matches=true;mediaHandler();assert.equal(document.documentElement.dataset.theme,'dark');
  saved='light';handlers.storage({key:THEME_KEY});assert.equal(document.documentElement.dataset.theme,'light');mediaHandler();assert.equal(document.documentElement.dataset.theme,'light');
+});
+
+
+test('all theme tokens used by component styles are defined, including badge foregrounds',()=>{
+ const directory=new URL('../src/',import.meta.url),styles=readdirSync(directory).filter(n=>n.endsWith('.css')).map(n=>readFileSync(new URL(n,directory),'utf8')).join('\n');
+ const used=new Set([...styles.matchAll(/var\((--theme-[\w-]+)/g)].map(m=>m[1])),defined=new Set([...styles.matchAll(/(--theme-[\w-]+)\s*:/g)].map(m=>m[1]));
+ assert.deepEqual([...used].filter(token=>!defined.has(token)),[]);
 });
